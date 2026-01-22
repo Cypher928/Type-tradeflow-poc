@@ -1,5 +1,7 @@
 # Server.js  
-  
+
+require("dotenv").config()
+const { sendTestPayment } = require("./xrplClient")  
 const express = require("express");  
 const app = express();  
 app.use(express.json());  
