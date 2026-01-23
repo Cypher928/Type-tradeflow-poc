@@ -1,4 +1,4 @@
-# TradeFlow Ledger – Backend Proof of Concept
+# TradeFlow Ledger (Backend Proof of Concept)
 ## XRPL Grant Alignment Summary
 
 TradeFlow Ledger is a trade finance Proof of Concept designed to increase on-chain activity on the XRP Ledger by recording trade reconciliation events and executing stablecoin-based settlements.
