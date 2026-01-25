@@ -1,206 +1,72 @@
-# TradeFlow Ledger  
-**Backend Proof of Concept (XRPL Trade Finance & Settlement)**
+# TradeFlow Ledger – RWA-Enabled Trade Reconciliation & RLUSD Settlement on XRPL
 
----
+TradeFlow Ledger is a backend Proof of Concept (PoC) for an automated trade finance and settlement platform built on the XRP Ledger (XRPL). The system enables exporters and importers to reconcile shared expenses (freight, insurance, customs), approve splits, and settle instantly using RLUSD stablecoins — with future support for tokenized invoice claims as Real-World Assets (RWAs).
 
-## Overview
+This PoC is open-source and serves as a foundation for the broader XRPL trade finance ecosystem.
 
-**TradeFlow Ledger** is a backend Proof of Concept (PoC) for a trade finance and settlement platform designed to **drive on-chain activity on the XRP Ledger (XRPL)**.
+## Purpose
+This PoC demonstrates the full trade lifecycle on XRPL, including:
+- Trade expense reconciliation
+- Multi-party approval
+- Instant RLUSD/USDC settlement
+- Tokenization of reconciled claims as RWAs (using MPTs) for financing and collateral
 
-The system demonstrates how real-world trade lifecycle events — such as reconciliation finalization and settlement approval — can directly trigger **XRPL transactions and stablecoin-based payments**, creating verifiable, immutable settlement records on-chain.
-
-This project is built to align with **XRPL Grants priorities**, including:
-- Trade finance
-- Payments
-- Stablecoins
-- Real World Asset (RWA) workflows
+It is designed to align with XRPL Grants priorities:  
+- Trade finance  
+- Payments  
+- Stablecoins (RLUSD)  
+- Real-World Asset (RWA) workflows  
 - On-chain activity growth
 
----
-
 ## Problem Statement
+Traditional trade reconciliation is manual, slow, and error-prone:
+- Shared costs (freight, insurance, customs) lead to disputes and delays
+- Spreadsheets and emails cause opacity and errors
+- Settlements take 30–90 days via bank wires (high fees, FX risk)
+- $1.5T global SME financing gap due to lack of liquidity on unpaid invoices
 
-Traditional trade finance relies heavily on:
-- Manual reconciliation
-- Delayed settlements
-- Fragmented record-keeping
-- Limited transparency between counterparties
-
-These inefficiencies increase costs, introduce disputes, and slow capital movement — especially in cross-border trade.
-
----
-
-## Solution
-
-TradeFlow Ledger introduces a backend system where:
-
-- Trade lifecycle events are digitally recorded
-- Reconciliation finalization acts as an **on-chain trigger**
-- Settlement approval executes **XRPL-based payments**
-- Stablecoins (RLUSD / USDC) are used for settlement
-- Each settlement results in an **immutable on-chain record**
-
-This design enables faster settlement, improved transparency, and provable transaction finality.
-
----
-
-## Proof of Concept Scope
-
-This Proof of Concept focuses on the **backend settlement logic** and demonstrates:
-
-- Trade creation
-- Reconciliation finalization
-- On-chain settlement via XRPL
-- Persistent trade history and settlement records
-
----
+TradeFlow Ledger automates reconciliation, provides on-chain transparency, and enables instant stablecoin settlements — with future RWA tokenization to unlock early financing.
 
 ## Architecture
+- Frontend prototype: Clickable user flow (Miro) for reconciliation and settlement
+- Backend PoC: Node.js + Express API (simulated endpoints for trade creation, reconciliation, settlement)
+- Planned XRPL integration:
+  - RLUSD/USDC direct payments via XRPL Payment transactions
+  - MPTs to tokenize reconciled invoice claims as RWAs (metadata: amount, due date, invoice ID, proof hash)
+  - EVM sidechain smart contracts for escrow, conditional release, and interest calculation
+  - On-chain audit trail for every step — verifiable via XRPL explorer
 
-**Backend Stack**
-- Node.js
-- Express
-- XRPL JavaScript SDK
+## API Endpoints (PoC)
+- POST `/trade` – Create new trade
+- POST `/trade/:id/reconcile` – Finalize reconciliation (simulated on-chain trigger)
+- POST `/trade/:id/settle` – Trigger RLUSD settlement
+- GET `/trades` – View all trades
 
-**Design**
-- REST API backend
-- XRPL used for settlement execution
-- Designed to integrate with:
-  - XRPL EVM Sidechain smart contracts
-  - Stablecoin issuers (RLUSD / USDC)
-  - Future frontend dashboards
+In production, reconciliation and settlement endpoints would trigger real XRPL transactions and MPT minting.
 
----
+## Validation & Early Traction
+- Concept validated with 15+ trade professionals (exporters, importers, logistics partners)
+- Early feedback confirms strong interest in automated reconciliation and instant stablecoin settlements
+- Beta pilot interest from multiple partners — targeting first real-world tests in Q1 2026
 
-## System Flow
+## Open Source & Community Contribution
+- Fully open-source PoC to serve as reusable foundation for the XRPL trade finance community
+- Future contributions: open reconciliation library, EVM contract templates, developer guides
 
-1. Trade is created via API  
-2. Trade is reconciled and finalized  
-3. Settlement approval triggers XRPL transaction  
-4. Stablecoin payment is executed  
-5. Transaction hash is stored with the trade record  
-
-Each settlement produces **on-chain activity on XRPL**.
-
----
-
-## API Endpoints
-
-### Create Trade
-
-### Finalize Reconciliation
-
-### Settle Trade (XRPL Transaction)
-
-### View All Trades
-
----
-
-## XRPL Alignment
-
-In production, TradeFlow Ledger is designed so that:
-
-- Each reconciliation and settlement approval results in:
-  - XRPL transactions
-  - Stablecoin payments (RLUSD / USDC)
-  - Immutable on-chain settlement records
-- Settlement logic can be extended to:
-  - XRPL EVM Sidechain smart contracts
-  - Escrow and conditional payment flows
-  - Tokenized trade assets (RWA)
-
-This directly supports XRPL’s mission to power efficient global payments and financial infrastructure.
-
----
-
-## Current Status
-
-✅ **Backend Proof of Concept complete**
-
-- Trades can be created and stored
-- Settlement triggers XRPL transactions
-- Transaction hashes are recorded
-- System demonstrates real on-chain activity
-- Codebase ready for grant review and expansion
-
-This repository represents a **functional MVP backend** for the XRPL Grants application.
-
----
-
-## Roadmap & Milestones (12 Months)
-
-**Phase 1 (0–3 months)**
-- Harden backend settlement logic
-- Add structured trade states and validation
-- Improve XRPL error handling and logging
-
-**Phase 2 (3–6 months)**
-- Integrate XRPL EVM Sidechain smart contracts
-- Implement escrow-based settlement flows
-- Support multi-party trade approvals
-
-**Phase 3 (6–9 months)**
-- Add stablecoin issuer integrations
-- Build reconciliation dispute workflows
-- Introduce audit and compliance tooling
-
-**Phase 4 (9–12 months)**
-- Frontend dashboard (React/Web)
-- Enterprise pilot integrations
-- Production-grade monitoring and security
-
----
-
-## Monetization & Financial Sustainability
-
-TradeFlow Ledger is designed as a **B2B SaaS platform** for trade finance participants.
-
-Revenue models include:
-- Per-transaction settlement fees
-- Monthly subscriptions for exporters/importers
-- Enterprise licensing for banks and trade platforms
-- Premium features (escrow automation, analytics, compliance tools)
-
-By tying revenue directly to **on-chain settlement activity**, the platform scales sustainably while increasing XRPL network usage.
-
----
+## Grant Milestones (12 Months)
+- Q1 2026: Deploy real RLUSD settlements and MPT-based invoice tokenization on testnet
+- Q2 2026: Launch beta with 20 trade partners — target 100+ monthly on-chain transactions
+- Q3 2026: Integrate EVM sidechain for lending/escrow features
+- Q4 2026: Scale to 200+ users and $1M+ settled volume run-rate
 
 ## Grant Intent
-
 XRPL grant funding will be used to:
-- Expand XRPL-native settlement logic
-- Integrate smart contracts on the XRPL EVM Sidechain
-- Support stablecoin payment rails
-- Advance the platform toward real-world trade pilots
+- Expand RLUSD-native settlement logic
+- Implement MPT-based RWA tokenization for invoice claims
+- Deploy EVM sidechain smart contracts for escrow and compliance
+- Launch beta pilots with trade partners in emerging markets
+- Drive meaningful on-chain activity (target 100+ monthly transactions in year 1)
 
----
+Built for the XRPL ecosystem. Focused on real-world financial utility.
 
-## Repository Purpose
-
-This repository exists to:
-- Demonstrate a working XRPL-aligned Proof of Concept
-- Provide transparent, reviewable code
-- Serve as the foundation for a full production system
-
----
-
-**Built for the XRPL ecosystem.  
-Focused on real-world financial utility.**
-
-## Validation & Traction
-- Early feedback from 15+ trade professionals (exporters, importers, logistics partners) confirms strong interest in pilots.
-- Prototype tested with real-world trade scenarios.
-
-## Technical XRPL Integration Plan
-- Reconciliation triggers RLUSD stablecoin payments for instant settlement.
-- MPTs used to tokenize reconciled invoice claims as RWAs (metadata: amount, due date, invoice ID).
-- EVM sidechain smart contracts handle escrow, interest, and compliance logic.
-
-## Open Source & Community
-- Fully open-source PoC to serve as a foundation for the XRPL trade finance community.
-- Future contributions: reusable reconciliation library, EVM contract templates.
-
-## Next Steps with Grant Funding
-- Deploy real RLUSD settlements and MPT-based RWA tokenization.
-- Target 100+ monthly on-chain transactions in year 1.
-- Launch beta pilots with trade partners in emerging markets.
+https://miro.com/app/board/uXjVGaMTsgY=/
