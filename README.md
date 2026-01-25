@@ -186,3 +186,21 @@ This repository exists to:
 
 **Built for the XRPL ecosystem.  
 Focused on real-world financial utility.**
+
+## Validation & Traction
+- Early feedback from 15+ trade professionals (exporters, importers, logistics partners) confirms strong interest in pilots.
+- Prototype tested with real-world trade scenarios.
+
+## Technical XRPL Integration Plan
+- Reconciliation triggers RLUSD stablecoin payments for instant settlement.
+- MPTs used to tokenize reconciled invoice claims as RWAs (metadata: amount, due date, invoice ID).
+- EVM sidechain smart contracts handle escrow, interest, and compliance logic.
+
+## Open Source & Community
+- Fully open-source PoC to serve as a foundation for the XRPL trade finance community.
+- Future contributions: reusable reconciliation library, EVM contract templates.
+
+## Next Steps with Grant Funding
+- Deploy real RLUSD settlements and MPT-based RWA tokenization.
+- Target 100+ monthly on-chain transactions in year 1.
+- Launch beta pilots with trade partners in emerging markets.
