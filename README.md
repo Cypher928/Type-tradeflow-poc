@@ -70,6 +70,3 @@ Built for the XRPL ecosystem. Focused on real-world financial utility.
 
 ## About the Founder
 Lynn Raymond — Founder with years of experience in expense reconciliation and shared cost disputes in commercial environments.
-
-![Prototype User Flow](prototype-flow.png)
-![Technical Architecture](architecture.png)
