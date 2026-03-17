@@ -25,8 +25,12 @@ Traditional trade reconciliation is manual and slow:
 
 TradeFlow automates reconciliation, provides on-chain transparency, and unlocks instant RLUSD settlements — with RWA tokenization for early cash flow.
 
+## Prototype & Architecture
+- Clickable User Flow: https://miro.com/app/board/uXjVGaMTsgY=/
+- Technical Architecture Diagram & Full Assets: https://drive.google.com/drive/mobile/folders/1UjXPqyrzOXoQoVGjBjxpbX1qGEXzc1FW
+
 ## Architecture & XRPL Integration
-- Frontend prototype: Clickable user flow (Miro) for reconciliation and settlement
+- Frontend prototype: Clickable user flow for reconciliation and settlement
 - Backend PoC: Node.js + Express API (simulated trade/reconciliation/settlement endpoints)
 - Planned XRPL features:
   - RLUSD/USDC direct payments via XRPL Payment transactions
@@ -63,3 +67,9 @@ Funding will be used to:
 - Drive meaningful on-chain activity (target 100+ monthly transactions in year 1)
 
 Built for the XRPL ecosystem. Focused on real-world financial utility.
+
+## About the Founder
+Lynn Raymond — Founder with years of experience in expense reconciliation and shared cost disputes in commercial environments.
+
+![Prototype User Flow](prototype-flow.png)
+![Technical Architecture](architecture.png)
