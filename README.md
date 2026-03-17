@@ -44,10 +44,12 @@ TradeFlow automates reconciliation, provides on-chain transparency, and unlocks 
 - POST /trade/:id/settle – Trigger RLUSD settlement
 - GET /trades – View all trades
 
-## Validation & Traction
-- Concept validated with 15+ trade professionals (exporters, importers, logistics)
-- Early feedback confirms strong interest in automated reconciliation and instant settlements
-- Beta pilot interest from multiple partners — targeting Q1 2026 tests
+## Validation & Early Traction
+
+- Concept validated through discussions with 15+ trade professionals (exporters, importers, and logistics participants)
+- Consistent feedback highlights demand for faster reconciliation and instant settlement
+- Early-stage conversations indicate strong interest in pilot testing once RLUSD settlement is live
+- Currently exploring pilot opportunities with small trade partners for initial deployment
 
 ## Open Source & Community
 - Fully open-source to serve as foundation for XRPL trade finance ecosystem
