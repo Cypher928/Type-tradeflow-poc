@@ -1,1 +1,16 @@
-{"dependencies":{"xrpl":"latest"}}
+{
+  "name": "type-tradeflow-poc",
+  "version": "0.1.0",
+  "description": "TradeFlow XRPL trade finance PoC with on-chain settlements",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "xrpl": "^3.0.0"
+  }
+}
