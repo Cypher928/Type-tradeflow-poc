@@ -46,6 +46,45 @@ MemoData : <sha256-of-invoice-document>
 
 ---
 
+## EVM Sidechain — Solidity Escrow Contract
+
+`TradeFlowEscrow.sol` is a simple Solidity escrow deployable on the
+**XRPL EVM Sidechain Devnet** (Chain ID 1440002).
+
+### What it does
+
+| Function | Description |
+|----------|-------------|
+| `createEscrow(exporter, releaseDelay, refundDelay, tradeId)` | Importer deposits funds; locks until time-lock passes |
+| `release(id)` | Exporter claims funds after release time-lock |
+| `refund(id)` | Importer reclaims funds after refund time-lock |
+
+The `tradeId` field mirrors the XRPL memo so the same trade can be tracked
+across both the native ledger and the EVM sidechain.
+
+### Deploy to XRPL EVM Devnet
+
+```bash
+# Install Hardhat
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+
+# In hardhat.config.js add:
+networks: {
+  xrplEvmDevnet: {
+    url: "https://rpc.evm.devnet.ripple.com",
+    chainId: 1440002,
+    accounts: [process.env.EVM_PRIVATE_KEY]
+  }
+}
+
+# Deploy
+npx hardhat run scripts/deploy.js --network xrplEvmDevnet
+```
+
+Explorer: https://evm-sidechain.xrpl.org
+
+---
+
 ## XRPL Hooks (Future)
 
 [XRPL Hooks](https://hooks.xrpl.org/) allow WebAssembly logic to run directly

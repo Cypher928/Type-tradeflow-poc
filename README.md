@@ -20,6 +20,21 @@ RLUSD settlements — with MPT-based RWA tokenization for early cash flow.
 
 ---
 
+> **Active development branch:** `claude/testnet-demo-script-KiBcS`
+> This branch contains the full feature set. A PR to merge into `main` is pending.
+> Clone this branch to get the complete codebase: `git checkout claude/testnet-demo-script-KiBcS`
+
+---
+
+## Security Notes
+
+- **Testnet only** — never connect a mainnet wallet to this PoC
+- **Never commit real seeds** — `.env` is in `.gitignore`; use `.env.example` as a template
+- **Production signing** — for mainnet use, replace seed-based signing with a hardware wallet or [XUMM SDK](https://xumm.readme.io/) so private keys never touch the server
+- **No auth on API** — the REST endpoints have no authentication; add API keys or JWT before any public deployment
+
+---
+
 ## XRPL Testnet Demo
 
 The full trade lifecycle runs end-to-end on XRPL Testnet today.
@@ -154,6 +169,24 @@ npm run demo       # funds wallets, runs all 7 XRPL transactions, prints explore
 
 ---
 
+## Frontend UI
+
+`public/index.html` is a lightweight single-page dashboard served at `http://localhost:3000` when the server is running. No build step required — pure HTML/CSS/JS.
+
+**What it includes:**
+
+| Section | Description |
+|---------|-------------|
+| Pipeline overview | Visual 5-step flow (Create → Reconcile → Escrow → Settle → Tokenise) |
+| Create Trade form | POST to `/trade` with counterparty name, XRPL address, value, due date |
+| Quick Settlement | Send XRP or RLUSD via `/settle`, returns hash + explorer link |
+| Active Trades list | Live-refreshable list of all trades with status badges |
+| Node Status | `/health` check showing XRPL connection and network |
+
+The UI uses a dark GitHub-style theme and requires the server to be running on port 3000.
+
+---
+
 ## Architecture
 
 ```
@@ -166,7 +199,8 @@ TradeFlow PoC
 ├── tests/
 │   └── xrplClient.test.js — Unit tests (no network)
 ├── contracts/
-│   └── README.md        — XRPL transaction patterns + Hooks roadmap
+│   ├── TradeFlowEscrow.sol — Solidity escrow for XRPL EVM Sidechain
+│   └── README.md           — XRPL transaction patterns + EVM deploy guide
 └── public/
     └── index.html       — Browser demo UI
 ```
@@ -225,7 +259,7 @@ This PoC aligns with XRPL Grants priorities:
 |---------|-----------|
 | Q1 2026 | RLUSD settlements + MPT tokenization live on testnet ✓ |
 | Q2 2026 | Beta with 20 trade partners — 100+ monthly on-chain transactions |
-| Q3 2026 | EVM sidechain integration for lending/escrow features |
+| Q3 2026 | EVM sidechain integration — `TradeFlowEscrow.sol` stub ready; full deploy to XRPL EVM Devnet |
 | Q4 2026 | 200+ users, $1M+ settled volume run-rate |
 
 ---
