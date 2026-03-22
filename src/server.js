@@ -1,15 +1,16 @@
 require('dotenv').config();
 const express = require('express');
-const xrpl = require('xrpl'); // fix: was 'xrpl-client'
+const xrpl = require('xrpl');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
 // ─── XRPL Client (persistent connection, not per-request) ────────────────────
-// Fix: was reconnecting on every call which causes issues under load
 const client = new xrpl.Client(process.env.XRPL_NODE || 'wss://s.altnet.rippletest.net:51233');
 
 async function getClient() {
@@ -17,12 +18,12 @@ async function getClient() {
   return client;
 }
 
-// ─── In-memory trade store (your existing pattern, kept as-is) ───────────────
+// ─── In-memory trade store ────────────────────────────────────────────────────
 const trades = new Map();
 
-// ─── Your original /settle endpoint — upgraded to support RLUSD ──────────────
+// ─── /settle endpoint — supports XRP and RLUSD ───────────────────────────────
 app.post('/settle', async (req, res) => {
-  const { amount, currency } = req.body; // added currency param
+  const { amount, currency } = req.body;
   const walletSeed = process.env.XRPL_WALLET_SEED;
   const destinationAddress = process.env.XRPL_DESTINATION_ADDRESS;
 
@@ -33,11 +34,11 @@ app.post('/settle', async (req, res) => {
     res.status(200).json({ success: true, hash: result.hash, explorerUrl: result.explorerUrl });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error.message }); // fix: was swallowing error detail
+    res.status(500).json({ error: error.message });
   }
 });
 
-// ─── New: Trade endpoints (your README promises these) ───────────────────────
+// ─── Trade endpoints ──────────────────────────────────────────────────────────
 
 // POST /trade — create a new trade
 app.post('/trade', (req, res) => {
@@ -97,7 +98,7 @@ app.post('/trade/:id/reconcile', async (req, res) => {
   }
 });
 
-// POST /trade/:id/settle — your original sendTestPayment logic, now wired to a trade
+// POST /trade/:id/settle — settle a trade on-chain
 app.post('/trade/:id/settle', async (req, res) => {
   const trade = trades.get(req.params.id);
   if (!trade) return res.status(404).json({ error: 'Trade not found' });
@@ -127,18 +128,16 @@ app.post('/trade/:id/settle', async (req, res) => {
   }
 });
 
-// ─── Core payment function (your original sendTestPayment, upgraded) ──────────
+// ─── Core payment function ────────────────────────────────────────────────────
 async function sendPayment(seed, destination, amount, currency = 'XRP', tradeId = null) {
   const c = await getClient();
-  const wallet = xrpl.Wallet.fromSeed(seed); // fix: was { Wallet: wallet } (capital W = bug)
+  const wallet = xrpl.Wallet.fromSeed(seed);
 
-  // Build Amount: XRP uses drops string, RLUSD uses token object
-  // fix: corrected RLUSD issuer address for testnet
   const RLUSD_ISSUER = process.env.RLUSD_ISSUER || 'rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV';
   const paymentAmount = currency === 'XRP'
     ? xrpl.xrpToDrops(amount)
     : {
-        currency: '524C555344000000000000000000000000000000', // RLUSD hex
+        currency: '524C555344000000000000000000000000000000',
         issuer: RLUSD_ISSUER,
         value: String(amount),
       };
@@ -158,7 +157,6 @@ async function sendPayment(seed, destination, amount, currency = 'XRP', tradeId 
     }),
   };
 
-  // fix: autofill sets sequence number and fee before signing
   const prepared = await c.autofill(tx);
   const signed = wallet.sign(prepared);
   const response = await c.submitAndWait(signed.tx_blob);
@@ -180,7 +178,7 @@ async function recordReconciliation(seed, data) {
     TransactionType: 'Payment',
     Account: wallet.address,
     Destination: data.counterparty,
-    Amount: '1', // 1 drop — minimal memo transaction
+    Amount: '1',
     Memos: [{
       Memo: {
         MemoType: Buffer.from('TradeFlow/Reconciliation', 'utf8').toString('hex').toUpperCase(),
@@ -189,7 +187,6 @@ async function recordReconciliation(seed, data) {
     }],
   };
 
-  // fix: autofill sets sequence number and fee before signing
   const prepared = await c.autofill(tx);
   const signed = wallet.sign(prepared);
   const response = await c.submitAndWait(signed.tx_blob);
@@ -205,7 +202,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', network: 'XRPL Testnet', timestamp: new Date().toISOString() });
 });
 
-// ─── Start (your original pattern, kept as-is) ───────────────────────────────
+// ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

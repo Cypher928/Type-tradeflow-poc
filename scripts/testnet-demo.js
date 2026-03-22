@@ -30,7 +30,7 @@ const {
   finishEscrow,
   tokenizeInvoiceAsMPT,
   getBalances,
-} = require("../xrplClient")
+} = require("../src/xrplClient")
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

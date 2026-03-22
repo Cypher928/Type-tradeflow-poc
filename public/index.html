@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradeFlow Ledger — Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent: #238636;
+      --accent-hover: #2ea043;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --success: #3fb950;
+      --warning: #d29922;
+      --error: #f85149;
+      --link: #58a6ff;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+    header span { font-size: 0.75rem; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 12px; }
+
+    .main {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 32px 0 8px;
+    }
+    .hero h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+    .hero p { color: var(--muted); font-size: 0.95rem; }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 12px;
+      text-align: center;
+    }
+    .step .num { font-size: 0.7rem; color: var(--muted); margin-bottom: 4px; }
+    .step .label { font-size: 0.85rem; font-weight: 600; }
+    .step .tag { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+
+    input, select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.875rem;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--link); }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 18px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover { background: var(--accent-hover); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .response {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      display: none;
+    }
+    .response.visible { display: block; }
+    .response.ok { border-color: var(--success); }
+    .response.err { border-color: var(--error); }
+
+    .response a { color: var(--link); text-decoration: none; }
+    .response a:hover { text-decoration: underline; }
+
+    .trade-list { display: grid; gap: 10px; }
+
+    .trade-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .trade-id { font-family: monospace; font-size: 0.8rem; color: var(--link); }
+    .trade-meta { font-size: 0.8rem; color: var(--muted); }
+    .badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .badge.active    { background: #1f3a5f; color: #58a6ff; }
+    .badge.reconciled{ background: #2d2a1f; color: #d29922; }
+    .badge.settled   { background: #1a3a1a; color: #3fb950; }
+
+    .empty { color: var(--muted); font-size: 0.875rem; text-align: center; padding: 24px; }
+
+    footer {
+      text-align: center;
+      padding: 40px 24px 24px;
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    footer a { color: var(--link); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+  <h1>TradeFlow Ledger</h1>
+  <span>Testnet</span>
+</header>
+
+<div class="main">
+
+  <div class="hero">
+    <h2>Trade Finance on the XRP Ledger</h2>
+    <p>Create trades, record reconciliation on-chain, and settle with RLUSD — all on XRPL Testnet.</p>
+  </div>
+
+  <!-- Pipeline overview -->
+  <div class="pipeline">
+    <div class="step">
+      <div class="num">01</div>
+      <div class="label">Create Trade</div>
+      <div class="tag">REST API</div>
+    </div>
+    <div class="step">
+      <div class="num">02</div>
+      <div class="label">Reconcile</div>
+      <div class="tag">XRPL Memo</div>
+    </div>
+    <div class="step">
+      <div class="num">03</div>
+      <div class="label">Escrow</div>
+      <div class="tag">EscrowCreate</div>
+    </div>
+    <div class="step">
+      <div class="num">04</div>
+      <div class="label">Settle</div>
+      <div class="tag">RLUSD Payment</div>
+    </div>
+    <div class="step">
+      <div class="num">05</div>
+      <div class="label">Tokenise</div>
+      <div class="tag">MPT / RWA</div>
+    </div>
+  </div>
+
+  <!-- Create trade -->
+  <div class="card">
+    <h3>Create New Trade</h3>
+    <div class="form-row">
+      <div>
+        <label for="cpName">Counterparty Name</label>
+        <input id="cpName" type="text" placeholder="Acme Imports Ltd" />
+      </div>
+      <div>
+        <label for="cpAddr">Counterparty XRPL Address</label>
+        <input id="cpAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="tradeValue">Total Value (USD)</label>
+        <input id="tradeValue" type="number" placeholder="5000" min="1" />
+      </div>
+      <div>
+        <label for="dueDate">Due Date</label>
+        <input id="dueDate" type="date" />
+      </div>
+    </div>
+    <button id="btnCreateTrade">Create Trade</button>
+    <div class="response" id="createResp"></div>
+  </div>
+
+  <!-- Settle (quick) -->
+  <div class="card">
+    <h3>Quick Settlement</h3>
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;">
+      Send a direct XRP or RLUSD payment from a wallet seed. Use this for testing the
+      <code>/settle</code> endpoint directly.
+    </p>
+    <div class="form-row">
+      <div>
+        <label for="settleAmount">Amount</label>
+        <input id="settleAmount" type="number" placeholder="10" min="0.000001" step="any" />
+      </div>
+      <div>
+        <label for="settleCurrency">Currency</label>
+        <select id="settleCurrency">
+          <option value="XRP">XRP</option>
+          <option value="RLUSD">RLUSD</option>
+        </select>
+      </div>
+    </div>
+    <button id="btnSettle">Send Payment</button>
+    <div class="response" id="settleResp"></div>
+  </div>
+
+  <!-- Active trades -->
+  <div class="card">
+    <h3>Active Trades <button id="btnRefresh" style="float:right;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:0.75rem;padding:4px 10px;">Refresh</button></h3>
+    <div class="trade-list" id="tradeList">
+      <div class="empty">No trades yet. Create one above.</div>
+    </div>
+  </div>
+
+  <!-- Health -->
+  <div class="card">
+    <h3>Node Status</h3>
+    <button id="btnHealth">Check /health</button>
+    <div class="response" id="healthResp"></div>
+  </div>
+
+</div>
+
+<footer>
+  Built on the <a href="https://xrpl.org" target="_blank">XRP Ledger</a> ·
+  <a href="https://testnet.xrpl.org" target="_blank">Testnet Explorer</a> ·
+  <a href="https://github.com/Cypher928/Type-tradeflow-poc" target="_blank">GitHub</a>
+</footer>
+
+<script>
+  const API = ""  // same origin — server serves this file
+
+  function showResp(el, ok, html) {
+    el.innerHTML = html
+    el.className = "response visible " + (ok ? "ok" : "err")
+  }
+
+  // ── Health check ──────────────────────────────────────────────────────────
+  document.getElementById("btnHealth").addEventListener("click", async () => {
+    const el = document.getElementById("healthResp")
+    try {
+      const r = await fetch(API + "/health")
+      const d = await r.json()
+      showResp(el, true, `Status: <strong>${d.status}</strong> · Network: ${d.network} · ${d.timestamp}`)
+    } catch (e) {
+      showResp(el, false, `Error: ${e.message}. Is the server running on port 3000?`)
+    }
+  })
+
+  // ── Create trade ──────────────────────────────────────────────────────────
+  document.getElementById("btnCreateTrade").addEventListener("click", async () => {
+    const el = document.getElementById("createResp")
+    const body = {
+      counterpartyName:    document.getElementById("cpName").value.trim(),
+      counterpartyAddress: document.getElementById("cpAddr").value.trim(),
+      totalValue:          document.getElementById("tradeValue").value,
+      dueDate:             document.getElementById("dueDate").value,
+    }
+    if (!body.counterpartyName || !body.counterpartyAddress || !body.totalValue || !body.dueDate) {
+      return showResp(el, false, "All fields are required.")
+    }
+    try {
+      const r = await fetch(API + "/trade", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      const d = await r.json()
+      if (d.success) {
+        showResp(el, true, `Trade created: <strong>${d.trade.id}</strong> · Status: ${d.trade.status}`)
+        loadTrades()
+      } else {
+        showResp(el, false, d.error || "Unknown error")
+      }
+    } catch (e) {
+      showResp(el, false, `Error: ${e.message}`)
+    }
+  })
+
+  // ── Settle ────────────────────────────────────────────────────────────────
+  document.getElementById("btnSettle").addEventListener("click", async () => {
+    const el = document.getElementById("settleResp")
+    const body = {
+      amount:   document.getElementById("settleAmount").value,
+      currency: document.getElementById("settleCurrency").value,
+    }
+    if (!body.amount) return showResp(el, false, "Amount is required.")
+    showResp(el, true, "Submitting transaction…")
+    try {
+      const r = await fetch(API + "/settle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      const d = await r.json()
+      if (d.success) {
+        showResp(el, true, `Transaction confirmed!<br>Hash: <code>${d.hash}</code><br><a href="${d.explorerUrl}" target="_blank">View on Explorer →</a>`)
+      } else {
+        showResp(el, false, d.error || "Transaction failed")
+      }
+    } catch (e) {
+      showResp(el, false, `Error: ${e.message}`)
+    }
+  })
+
+  // ── Load trades ───────────────────────────────────────────────────────────
+  async function loadTrades() {
+    const list = document.getElementById("tradeList")
+    try {
+      const r = await fetch(API + "/trades")
+      const d = await r.json()
+      if (!d.trades || d.trades.length === 0) {
+        list.innerHTML = '<div class="empty">No trades yet. Create one above.</div>'
+        return
+      }
+      list.innerHTML = d.trades.map(t => `
+        <div class="trade-item">
+          <span class="trade-id">${t.id}</span>
+          <span class="trade-meta">${t.counterpartyName} · $${t.totalValue.toLocaleString()} · Due ${t.dueDate}</span>
+          <span class="badge ${t.status}">${t.status}</span>
+        </div>
+      `).join("")
+    } catch (e) {
+      list.innerHTML = `<div class="empty">Could not load trades: ${e.message}</div>`
+    }
+  }
+
+  document.getElementById("btnRefresh").addEventListener("click", loadTrades)
+  loadTrades()
+</script>
+
+</body>
+</html>
