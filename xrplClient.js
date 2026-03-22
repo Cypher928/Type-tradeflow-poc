@@ -49,8 +49,14 @@ return result
 }
 
 // ─── RLUSD Payment (your sendTestPayment extended for stablecoins) ────────────
-const RLUSD_ISSUER = process.env.RLUSD_ISSUER || “rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh”
-const RLUSD_CURRENCY = “524C555344000000000000000000000000000000” // “RLUSD” hex-padded
+// Testnet issuer (use for all development and grant demos)
+const RLUSD_ISSUER = process.env.RLUSD_ISSUER || "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"
+
+// Mainnet issuer (DO NOT use until you go live)
+// const RLUSD_ISSUER_MAINNET = "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+
+const RLUSD_CURRENCY = "524C555344000000000000000000000000000000" // stays the same ✅
+
 
 async function sendRLUSDPayment({ fromSeed, toAddress, amount, tradeId, invoiceHash }) {
 const c = await connectXRPL()
