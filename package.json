@@ -14,6 +14,9 @@
     "compile:evm": "node scripts/compile-evm.js",
     "deploy:evm": "node scripts/deploy-evm-run.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
