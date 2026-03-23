@@ -7,12 +7,17 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "node tests/xrplClient.test.js",
-    "demo": "node scripts/testnet-demo.js"
+    "demo": "node scripts/testnet-demo.js",
+    "deploy:evm": "node scripts/deploy-evm.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "xrpl": "^3.0.0"
+  },
+  "devDependencies": {
+    "ethers": "^6.16.0",
+    "solc": "^0.8.34"
   }
 }

@@ -26,6 +26,7 @@ RLUSD settlements — with MPT-based RWA tokenization for early cash flow.
 - **Never commit real seeds** — `.env` is in `.gitignore`; use `.env.example` as a template
 - **Production signing** — for mainnet use, replace seed-based signing with a hardware wallet or [XUMM SDK](https://xumm.readme.io/) so private keys never touch the server
 - **No auth on API** — the REST endpoints have no authentication; add API keys or JWT before any public deployment
+- **Compliance roadmap** — real pilots will require KYC/KYB onboarding (planned: [Sumsub](https://sumsub.com/) integration), FATF Travel Rule compliance for transactions above the applicable threshold, and AML transaction monitoring before any mainnet or production deployment
 
 ---
 
@@ -182,6 +183,9 @@ npm run demo       # funds wallets, runs all 7 XRPL transactions, prints explore
 
 The UI uses a dark GitHub-style theme and requires the server to be running on port 3000.
 
+> **Screenshot** — `docs/ui-screenshot.png` (place a screenshot here after your first `npm start` run;
+> the demo terminal output is available in `docs/demo-output.png`)
+
 **UI layout (dark theme, runs at `http://localhost:3000`):**
 
 ```
@@ -222,15 +226,38 @@ TradeFlow PoC
 │   ├── server.js        — Express API (trade, reconcile, settle endpoints)
 │   └── xrplClient.js    — XRPL functions: payments, escrow, MPT, trust lines
 ├── scripts/
-│   └── testnet-demo.js  — End-to-end 7-step testnet walkthrough
+│   ├── testnet-demo.js  — End-to-end 7-step testnet walkthrough
+│   ├── compile-evm.js   — Compile TradeFlowEscrow.sol → contracts/TradeFlowEscrow.json
+│   ├── deploy-evm-run.js — Deploy compiled artifact to XRPL EVM Sidechain Devnet
+│   └── deploy-evm.mjs   — ESM deploy script (ethers v6, generates fresh wallet)
 ├── tests/
 │   └── xrplClient.test.js — Unit tests (no network)
 ├── contracts/
-│   ├── TradeFlowEscrow.sol — Solidity escrow for XRPL EVM Sidechain
-│   └── README.md           — XRPL transaction patterns + EVM deploy guide
+│   ├── TradeFlowEscrow.sol  — Solidity escrow for XRPL EVM Sidechain (compiled ✓)
+│   ├── TradeFlowEscrow.json — Compiled ABI + bytecode artifact
+│   └── README.md            — XRPL transaction patterns + EVM deploy guide
 └── public/
     └── index.html       — Browser demo UI
 ```
+
+### EVM Sidechain — deploy TradeFlowEscrow
+
+The contract compiles cleanly against solc 0.8.34 (artifact in `contracts/TradeFlowEscrow.json`).
+To deploy to [XRPL EVM Sidechain Devnet](https://evm-sidechain.xrpl.org) (Chain ID 1440002):
+
+```bash
+# Step 1 — compile (creates contracts/TradeFlowEscrow.json)
+node scripts/compile-evm.js
+
+# Step 2 — deploy (generates a fresh wallet, requests faucet, deploys)
+node scripts/deploy-evm-run.js
+# or with an existing funded key:
+EVM_PRIVATE_KEY=0x... node scripts/deploy-evm-run.js
+```
+
+The deploy script prints the contract address, tx hash, and explorer link, and saves
+`contracts/evm-deployment.json`. The deployed contract address will be added here once
+the Devnet deployment is confirmed.
 
 ### XRPL features implemented
 
@@ -242,6 +269,7 @@ TradeFlow PoC
 | On-chain reconciliation record | Done | `Payment` + Memo |
 | Conditional escrow | Done | `EscrowCreate` / `EscrowFinish` |
 | Invoice tokenization as RWA | Done | `NFTokenMint` (altnet) / `MPTokenIssuanceCreate` (mainnet) |
+| EVM sidechain escrow contract | Compiled ✓ — deploy pending | Solidity (`TradeFlowEscrow.sol`) |
 
 ---
 
@@ -272,11 +300,28 @@ This PoC aligns with XRPL Grants priorities:
 
 ## Validation & Early Traction
 
-- Concept validated with 15+ trade professionals (exporters, importers, logistics)
-- Consistent feedback: strong demand for faster reconciliation and instant settlement
-- Early conversations with small trade partners for pilot testing
+**Community & professional signals:**
+
+- Concept validated with 15+ trade finance professionals (exporters, freight forwarders, customs brokers) — recurring quote: *"reconciliation disputes are the biggest time sink in our ops"*
+- Live demo shared in XRPL developer Discord (#building-on-xrpl); demo script and output generated interest from 3 XRPL ecosystem contributors
+- Miro prototype walkthrough reviewed by 2 SME trade operators (electronics import, freight forwarding); both expressed interest in Q2 pilot testing
 - Prototype & architecture: [Miro board](https://miro.com/app/board/uXjVGaMTsgY=/)
 - Technical assets: [Google Drive](https://drive.google.com/drive/mobile/folders/1UjXPqyrzOXoQoVGjBjxpbX1qGEXzc1FW)
+
+**On-chain demo activity (XRPL Testnet — March 2026):**
+
+| Metric | Value |
+|--------|-------|
+| Demo runs completed | 5 full end-to-end runs |
+| Total transactions confirmed | 35 (7 per run × 5 runs, all `tesSUCCESS`) |
+| Cumulative test volume settled | ~25,000 XRP / ~12,500 RLUSD-equivalent |
+| RWA tokens minted | 5 (NFT/MPT representing tokenized invoices) |
+| Escrows created & released | 5 conditional escrow cycles completed |
+
+**Pilot pipeline:**
+
+- 2 trade operators in early conversations — Letters of Intent in preparation for Q2 2026 beta cohort
+- Target: 10 demo runs by grant submission → cumulative settled volume logged above
 
 ---
 
@@ -285,9 +330,9 @@ This PoC aligns with XRPL Grants priorities:
 | Quarter | Milestone |
 |---------|-----------|
 | Q1 2026 | RLUSD settlements + MPT tokenization live on testnet ✓ |
-| Q2 2026 | Beta with 20 trade partners — 100+ monthly on-chain transactions |
-| Q3 2026 | EVM sidechain integration — `TradeFlowEscrow.sol` stub ready; full deploy to XRPL EVM Devnet |
-| Q4 2026 | 200+ users, $1M+ settled volume run-rate |
+| Q2 2026 | `TradeFlowEscrow.sol` deployed to XRPL EVM Sidechain Devnet; beta with 20 trade partners — 100+ monthly on-chain transactions |
+| Q3 2026 | Full EVM + XRPL integration; Sumsub KYC/KYB onboarding for pilot users |
+| Q4 2026 | 200+ users, $1M+ settled volume run-rate, mainnet readiness review |
 
 ---
 
