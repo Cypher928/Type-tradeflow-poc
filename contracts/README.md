@@ -83,6 +83,15 @@ npx hardhat run scripts/deploy.js --network xrplEvmDevnet
 
 Explorer: https://evm-sidechain.xrpl.org
 
+**Shortcut with the included scripts:**
+
+```bash
+node scripts/compile-evm.js      # → contracts/TradeFlowEscrow.json (ABI + bytecode)
+node scripts/deploy-evm-run.js   # → deploys and saves contracts/evm-deployment.json
+```
+
+`TradeFlowEscrow.json` (compiled artifact) is committed — deploy pending Devnet access.
+
 ---
 
 ## XRPL Hooks (Future)

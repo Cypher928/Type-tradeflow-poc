@@ -1,14 +1,18 @@
 {
-  "name": "type-tradeflow-poc",
+  "name": "tradeflow-poc",
   "version": "0.1.0",
-  "description": "TradeFlow XRPL trade finance PoC with on-chain settlements",
+  "description": "TradeFlow Ledger: XRPL trade finance PoC with RLUSD settlements & RWA tokenization",
   "main": "src/server.js",
+  "keywords": ["xrpl", "rlusd", "trade-finance", "rwa", "escrow", "blockchain", "stablecoin"],
+  "author": "Lynn Raymond",
+  "license": "MIT",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "node tests/xrplClient.test.js",
     "demo": "node scripts/testnet-demo.js",
-    "deploy:evm": "node scripts/deploy-evm.mjs"
+    "compile:evm": "node scripts/compile-evm.js",
+    "deploy:evm": "node scripts/deploy-evm-run.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -18,6 +22,7 @@
   },
   "devDependencies": {
     "ethers": "^6.16.0",
+    "nodemon": "^3.1.0",
     "solc": "^0.8.34"
   }
 }

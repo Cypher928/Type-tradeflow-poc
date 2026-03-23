@@ -20,6 +20,23 @@ RLUSD settlements — with MPT-based RWA tokenization for early cash flow.
 
 ---
 
+## Why XRPL?
+
+| Advantage | How TradeFlow uses it |
+|-----------|----------------------|
+| **3–5 second finality** | Trade settlements confirm in seconds vs 30–90 day wire delays |
+| **< $0.01 transaction fees** | Every reconciliation step is written on-chain affordably |
+| **Native RLUSD stablecoin** | Low-volatility settlement currency — no wrapping, no bridges |
+| **Built-in Escrow** | Conditional fund release without deploying a smart contract |
+| **NFToken / MPT** | Invoice tokenization → collateral for working capital financing |
+| **On-ledger Memos** | Immutable, auditable record of every trade step |
+| **XRPL EVM Sidechain** | Optional Solidity escrow for advanced conditional logic |
+
+XRPL gives trade finance the settlement speed, cost, and transparency that traditional
+banking rails cannot match.
+
+---
+
 ## Security Notes
 
 - **Testnet only** — never connect a mainnet wallet to this PoC
