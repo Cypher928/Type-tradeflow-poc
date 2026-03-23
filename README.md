@@ -202,7 +202,11 @@ npm run demo       # funds wallets, runs all 7 XRPL transactions, prints explore
 
 The UI uses a dark GitHub-style theme and requires the server to be running on port 3000.
 
-> **Demo screenshot** — `docs/demo-output.png` (see demo output above; upload a UI screenshot to `docs/ui-screenshot.png` after your first `npm start` run)
+**Demo screenshots** — successful test run on March 23, 2026 — all steps tesSUCCESS:
+
+![Console demo output](docs/demo-output.png)
+
+![Dashboard UI](docs/dashboard.png.png)
 
 **UI layout (dark theme, runs at `http://localhost:3000`):**
 
