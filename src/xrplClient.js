@@ -169,7 +169,9 @@ async function createEscrow({ senderSeed, destination, xrpAmount, releaseAfterSe
   const c = await connectXRPL()
   const wallet = xrpl.Wallet.fromSeed(senderSeed)
 
-  const releaseTime = xrpl.unixTimeToRippleTime(Math.floor(Date.now() / 1000) + releaseAfterSeconds)
+  // Ripple epoch starts Jan 1 2000; XRPL FinishAfter requires seconds since Ripple epoch
+  const RIPPLE_EPOCH_OFFSET = 946684800
+  const releaseTime = Math.floor(Date.now() / 1000) + releaseAfterSeconds - RIPPLE_EPOCH_OFFSET
 
   const tx = {
     TransactionType: "EscrowCreate",
