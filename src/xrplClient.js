@@ -188,13 +188,14 @@ async function createEscrow({ senderSeed, destination, xrpAmount, releaseAfterSe
   }
 
   const prepared = await c.autofill(tx)
+  const escrowSequence = prepared.Sequence  // capture before signing; tx_json structure varies by lib version
   const signed = wallet.sign(prepared)
   const result = await c.submitAndWait(signed.tx_blob)
 
   return {
     hash: result.result.hash,
     status: result.result.meta.TransactionResult,
-    escrowSequence: result.result.tx_json.Sequence,
+    escrowSequence,
     escrowOwner: wallet.classicAddress,
     explorerUrl: `https://testnet.xrpl.org/transactions/${result.result.hash}`
   }
