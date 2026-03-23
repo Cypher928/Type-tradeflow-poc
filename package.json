@@ -3,7 +3,15 @@
   "version": "0.1.0",
   "description": "TradeFlow Ledger: XRPL trade finance PoC with RLUSD settlements & RWA tokenization",
   "main": "src/server.js",
-  "keywords": ["xrpl", "rlusd", "trade-finance", "rwa", "escrow", "blockchain", "stablecoin"],
+  "keywords": [
+    "xrpl",
+    "rlusd",
+    "trade-finance",
+    "rwa",
+    "escrow",
+    "blockchain",
+    "stablecoin"
+  ],
   "author": "Lynn Raymond",
   "license": "MIT",
   "scripts": {
@@ -13,6 +21,9 @@
     "demo": "node scripts/testnet-demo.js",
     "compile:evm": "node scripts/compile-evm.js",
     "deploy:evm": "node scripts/deploy-evm-run.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "cors": "^2.8.5",

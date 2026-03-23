@@ -70,20 +70,22 @@ node scripts/testnet-demo.js
 **Live run output** (March 23 2026 — all 7 transactions confirmed on XRPL Testnet):
 
 ```
-Exporter wallet : https://testnet.xrpl.org/accounts/rKsEtP5ETd21ju3fu4XD9n83VTeHV5NGGC
-Importer wallet : https://testnet.xrpl.org/accounts/r2fAKaUfxqPRD8v7pBXZ4fM6jMLsAuMqP
+TRADEFLOW DEMO COMPLETE
+
+Exporter wallet : https://testnet.xrpl.org/accounts/rJLD4b6kNgfKkGUeD7QVJnyJpKuW3G65Pc
+Importer wallet : https://testnet.xrpl.org/accounts/rwD2H6rRJ7H66wMnZ61YFZ3g9pxG4vLFYr
 
 Transactions
-├─ Exporter TrustSet   → https://testnet.xrpl.org/transactions/88AF3D908F3C4317D9AE8FC57762D60F78522862B31CD3A3C5EC29B004A8A14E
-├─ Importer TrustSet   → https://testnet.xrpl.org/transactions/9512A34F47D93FC88DBC7C25DA4FB7D0E8A7AF309A667A2F9119AB827B63F2BB
-├─ XRP Payment         → https://testnet.xrpl.org/transactions/08B0E5233C036DE5A37FC235552A895E9BCC40D3CBDEDD1BD3AEFA5FAD0441D8
-├─ Reconciliation      → https://testnet.xrpl.org/transactions/C37FAFF487256ED0FF3F77C8A8930E6780BEE45DA4272CD55298497C398EE6B9
-├─ EscrowCreate        → https://testnet.xrpl.org/transactions/88F7025718A691764B8511B5131B78248A018DDC32585624FB036EADD6695084
-├─ EscrowFinish        → https://testnet.xrpl.org/transactions/84EDB6EEF332A86AB39B869B7030AD0B97A1BC944956D9D5DFD6A0E3D1325544
-└─ NFT Tokenisation    → https://testnet.xrpl.org/transactions/2065D14F782C32F0B0C374A976591C5A33FFF65C3FF7FDC8C88D078D0FA19CDF
+├─ Exporter TrustSet   → https://testnet.xrpl.org/transactions/F65734A806C5354440D76824264CA6339C49B40BE5B84327AFE0678700DD042E
+├─ Importer TrustSet   → https://testnet.xrpl.org/transactions/4C47A22EF096DC0CA8ECD3B3C485080D4950826CBE19F02DA258FF822C9BBD73
+├─ XRP Payment         → https://testnet.xrpl.org/transactions/3CBF7D905245A1F655BCB2EEEE5E87425E1FD7DAF886CFBE2E9DA469E2B636FE
+├─ Reconciliation      → https://testnet.xrpl.org/transactions/71BD2B01A4D74C343558E41047912ABB5E72620CBDAF8DF1F31DBC2B2BDB66B1
+├─ EscrowCreate        → https://testnet.xrpl.org/transactions/5A449B760BEFD3E6E42B527EC81CB7F0E88A0A8027DFF6EE4417833BB53701D4
+├─ EscrowFinish        → https://testnet.xrpl.org/transactions/1DF883E4B93C256D608D403F60174F5ED69BA51CEC551A9FAC31604E77FEDB5B
+└─ NFT Tokenisation    → https://testnet.xrpl.org/transactions/7C3A26BC9FBE7AC27B1E737AA1DC6E479136BA8A5E1673844A074DB98C4DD08A
 
-Trade ID   : TF-1774227012674
-Invoice ID : INV-19D182BCFFA
+Trade ID   : TF-1774287233392
+Invoice ID : INV-19D1BC2B9A9
 ```
 
 **Settlement payment code** (`src/xrplClient.js`):
@@ -200,8 +202,7 @@ npm run demo       # funds wallets, runs all 7 XRPL transactions, prints explore
 
 The UI uses a dark GitHub-style theme and requires the server to be running on port 3000.
 
-> **Screenshot** — `docs/ui-screenshot.png` (place a screenshot here after your first `npm start` run;
-> the demo terminal output is available in `docs/demo-output.png`)
+> **Demo screenshot** — `docs/demo-output.png` (see demo output above; upload a UI screenshot to `docs/ui-screenshot.png` after your first `npm start` run)
 
 **UI layout (dark theme, runs at `http://localhost:3000`):**
 

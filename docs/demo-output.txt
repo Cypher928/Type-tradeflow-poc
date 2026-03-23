@@ -1,0 +1,25 @@
+TRADEFLOW DEMO COMPLETE — Copy these URLs for your grant application
+=====================================================================
+
+Exporter wallet : https://testnet.xrpl.org/accounts/rJLD4b6kNgfKkGUeD7QVJnyJpKuW3G65Pc
+Importer wallet : https://testnet.xrpl.org/accounts/rwD2H6rRJ7H66wMnZ61YFZ3g9pxG4vLFYr
+
+Transactions
+├─ Exporter TrustSet   → https://testnet.xrpl.org/transactions/F65734A806C5354440D76824264CA6339C49B40BE5B84327AFE0678700DD042E
+├─ Importer TrustSet   → https://testnet.xrpl.org/transactions/4C47A22EF096DC0CA8ECD3B3C485080D4950826CBE19F02DA258FF822C9BBD73
+├─ XRP Payment         → https://testnet.xrpl.org/transactions/3CBF7D905245A1F655BCB2EEEE5E87425E1FD7DAF886CFBE2E9DA469E2B636FE
+├─ Reconciliation      → https://testnet.xrpl.org/transactions/71BD2B01A4D74C343558E41047912ABB5E72620CBDAF8DF1F31DBC2B2BDB66B1
+├─ EscrowCreate        → https://testnet.xrpl.org/transactions/5A449B760BEFD3E6E42B527EC81CB7F0E88A0A8027DFF6EE4417833BB53701D4
+├─ EscrowFinish        → https://testnet.xrpl.org/transactions/1DF883E4B93C256D608D403F60174F5ED69BA51CEC551A9FAC31604E77FEDB5B
+└─ NFT Tokenisation    → https://testnet.xrpl.org/transactions/7C3A26BC9FBE7AC27B1E737AA1DC6E479136BA8A5E1673844A074DB98C4DD08A
+
+Trade ID   : TF-1774287233392
+Invoice ID : INV-19D1BC2B9A9
+
+Disconnected from XRPL
+
+--- npm start output ---
+> tradeflow-poc@0.1.0 start
+> node src/server.js
+
+Server running on port 3000
