@@ -52,20 +52,20 @@ node scripts/testnet-demo.js
 **Live run output** (March 23 2026 — all 7 transactions confirmed on XRPL Testnet):
 
 ```
-Exporter wallet : https://testnet.xrpl.org/accounts/rG5dsQoWEHf5spuFacJVDPyvx6k3GRy1fQ
-Importer wallet : https://testnet.xrpl.org/accounts/r3QTtak5E29tT7J9YmyAzoM424ivpkdJvM
+Exporter wallet : https://testnet.xrpl.org/accounts/rKsEtP5ETd21ju3fu4XD9n83VTeHV5NGGC
+Importer wallet : https://testnet.xrpl.org/accounts/r2fAKaUfxqPRD8v7pBXZ4fM6jMLsAuMqP
 
 Transactions
-├─ Exporter TrustSet   → https://testnet.xrpl.org/transactions/EDB6D650739DC24BF9E5113B80C63E04C087F9AA3149A428FEE74283B615C0C4
-├─ Importer TrustSet   → https://testnet.xrpl.org/transactions/6029014486ECA2743EF6AD680DA8CC98B49EC49548B10F0F032E00BBFFB436B2
-├─ XRP Payment         → https://testnet.xrpl.org/transactions/3AE04A820B2CEB23D240BF0EDB87744FC47E2EB46ED71B8D45F0CCCC3698D69F
-├─ Reconciliation      → https://testnet.xrpl.org/transactions/1A5107ED70C54992D7EAAD3BCB4186358EF72E35EF6AA8159775FBE773590AF0
-├─ EscrowCreate        → https://testnet.xrpl.org/transactions/CD2664AC82737694C9B1547E1F5787BA9C6546F7FDAC2F87D9E1C01E6F92E1E9
-├─ EscrowFinish        → https://testnet.xrpl.org/transactions/199C26EF2F6A4E66F85A37094D8B89972AB4A47226C3D828A80C32BAE37B5C0B
-└─ NFT Tokenisation    → https://testnet.xrpl.org/transactions/D7CFACF93B29259290DE637A8AC2E0C2E72B6A871E945842726CEC58DD98CBBD
+├─ Exporter TrustSet   → https://testnet.xrpl.org/transactions/88AF3D908F3C4317D9AE8FC57762D60F78522862B31CD3A3C5EC29B004A8A14E
+├─ Importer TrustSet   → https://testnet.xrpl.org/transactions/9512A34F47D93FC88DBC7C25DA4FB7D0E8A7AF309A667A2F9119AB827B63F2BB
+├─ XRP Payment         → https://testnet.xrpl.org/transactions/08B0E5233C036DE5A37FC235552A895E9BCC40D3CBDEDD1BD3AEFA5FAD0441D8
+├─ Reconciliation      → https://testnet.xrpl.org/transactions/C37FAFF487256ED0FF3F77C8A8930E6780BEE45DA4272CD55298497C398EE6B9
+├─ EscrowCreate        → https://testnet.xrpl.org/transactions/88F7025718A691764B8511B5131B78248A018DDC32585624FB036EADD6695084
+├─ EscrowFinish        → https://testnet.xrpl.org/transactions/84EDB6EEF332A86AB39B869B7030AD0B97A1BC944956D9D5DFD6A0E3D1325544
+└─ NFT Tokenisation    → https://testnet.xrpl.org/transactions/2065D14F782C32F0B0C374A976591C5A33FFF65C3FF7FDC8C88D078D0FA19CDF
 
-Trade ID   : TF-1774225343875
-Invoice ID : INV-19D1812625C
+Trade ID   : TF-1774227012674
+Invoice ID : INV-19D182BCFFA
 ```
 
 **Settlement payment code** (`src/xrplClient.js`):
