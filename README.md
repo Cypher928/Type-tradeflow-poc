@@ -69,8 +69,6 @@ node scripts/testnet-demo.js
 
 **Live run output** (March 23 2026 — all 7 transactions confirmed on XRPL Testnet):
 
-![Demo console output](docs/demo-output.png)
-
 ```
 TRADEFLOW DEMO COMPLETE
 
