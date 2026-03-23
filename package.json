@@ -27,8 +27,11 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "demo": "^0.1.10",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "npm": "^11.12.0",
+    "run": "^1.5.0",
     "xrpl": "^3.0.0"
   },
   "devDependencies": {
