@@ -206,7 +206,7 @@ The UI uses a dark GitHub-style theme and requires the server to be running on p
 
 ![Console demo output](docs/demo-output.png)
 
-![Dashboard UI](docs/dashboard.png.png)
+![Dashboard UI](docs/dashboard.png)
 
 **UI layout (dark theme, runs at `http://localhost:3000`):**
 
