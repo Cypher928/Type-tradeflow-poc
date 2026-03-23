@@ -55,20 +55,23 @@ node scripts/testnet-demo.js
 | 6 | Settlement release after time lock | `EscrowFinish` |
 | 7 | Tokenize reconciled invoice as RWA | `NFTokenMint` (altnet) → `MPTokenIssuanceCreate` (mainnet) |
 
-**Example output** (paste your own hashes after running the demo):
+**Live run output** (March 23 2026 — all 7 transactions confirmed on XRPL Testnet):
 
 ```
-Exporter wallet : https://testnet.xrpl.org/accounts/<exporter-address>
-Importer wallet : https://testnet.xrpl.org/accounts/<importer-address>
+Exporter wallet : https://testnet.xrpl.org/accounts/rG5dsQoWEHf5spuFacJVDPyvx6k3GRy1fQ
+Importer wallet : https://testnet.xrpl.org/accounts/r3QTtak5E29tT7J9YmyAzoM424ivpkdJvM
 
 Transactions
-├─ Exporter TrustSet   → https://testnet.xrpl.org/transactions/<hash>
-├─ Importer TrustSet   → https://testnet.xrpl.org/transactions/<hash>
-├─ XRP Payment         → https://testnet.xrpl.org/transactions/<hash>
-├─ Reconciliation      → https://testnet.xrpl.org/transactions/<hash>
-├─ EscrowCreate        → https://testnet.xrpl.org/transactions/<hash>
-├─ EscrowFinish        → https://testnet.xrpl.org/transactions/<hash>
-└─ NFT Tokenisation    → https://testnet.xrpl.org/transactions/<hash>
+├─ Exporter TrustSet   → https://testnet.xrpl.org/transactions/EDB6D650739DC24BF9E5113B80C63E04C087F9AA3149A428FEE74283B615C0C4
+├─ Importer TrustSet   → https://testnet.xrpl.org/transactions/6029014486ECA2743EF6AD680DA8CC98B49EC49548B10F0F032E00BBFFB436B2
+├─ XRP Payment         → https://testnet.xrpl.org/transactions/3AE04A820B2CEB23D240BF0EDB87744FC47E2EB46ED71B8D45F0CCCC3698D69F
+├─ Reconciliation      → https://testnet.xrpl.org/transactions/1A5107ED70C54992D7EAAD3BCB4186358EF72E35EF6AA8159775FBE773590AF0
+├─ EscrowCreate        → https://testnet.xrpl.org/transactions/CD2664AC82737694C9B1547E1F5787BA9C6546F7FDAC2F87D9E1C01E6F92E1E9
+├─ EscrowFinish        → https://testnet.xrpl.org/transactions/199C26EF2F6A4E66F85A37094D8B89972AB4A47226C3D828A80C32BAE37B5C0B
+└─ NFT Tokenisation    → https://testnet.xrpl.org/transactions/D7CFACF93B29259290DE637A8AC2E0C2E72B6A871E945842726CEC58DD98CBBD
+
+Trade ID   : TF-1774225343875
+Invoice ID : INV-19D1812625C
 ```
 
 **Settlement payment code** (`src/xrplClient.js`):
