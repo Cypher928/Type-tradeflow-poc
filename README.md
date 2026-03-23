@@ -53,7 +53,7 @@ node scripts/testnet-demo.js
 | 4 | Immutable reconciliation record | `Payment` (1 drop) + Memo |
 | 5 | Conditional settlement lock | `EscrowCreate` |
 | 6 | Settlement release after time lock | `EscrowFinish` |
-| 7 | Tokenize reconciled invoice as RWA | `MPTokenIssuanceCreate` |
+| 7 | Tokenize reconciled invoice as RWA | `NFTokenMint` (altnet) → `MPTokenIssuanceCreate` (mainnet) |
 
 **Example output** (paste your own hashes after running the demo):
 
@@ -68,7 +68,7 @@ Transactions
 ├─ Reconciliation      → https://testnet.xrpl.org/transactions/<hash>
 ├─ EscrowCreate        → https://testnet.xrpl.org/transactions/<hash>
 ├─ EscrowFinish        → https://testnet.xrpl.org/transactions/<hash>
-└─ MPT Tokenisation    → https://testnet.xrpl.org/transactions/<hash>
+└─ NFT Tokenisation    → https://testnet.xrpl.org/transactions/<hash>
 ```
 
 **Settlement payment code** (`src/xrplClient.js`):
@@ -214,7 +214,7 @@ TradeFlow PoC
 | RLUSD trust line setup | Done | `TrustSet` |
 | On-chain reconciliation record | Done | `Payment` + Memo |
 | Conditional escrow | Done | `EscrowCreate` / `EscrowFinish` |
-| Invoice tokenization as RWA | Done | `MPTokenIssuanceCreate` |
+| Invoice tokenization as RWA | Done | `NFTokenMint` (altnet) / `MPTokenIssuanceCreate` (mainnet) |
 
 ---
 

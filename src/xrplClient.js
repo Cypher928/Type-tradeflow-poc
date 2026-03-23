@@ -129,7 +129,9 @@ async function recordReconciliationOnChain({ walletSeed, counterpartyAddress, tr
   }
 }
 
-// ─── MPT — tokenize reconciled invoice as RWA ────────────────────────────────
+// ─── NFT — tokenize reconciled invoice as RWA (NFTokenMint) ──────────────────
+// MPTokenIssuanceCreate requires the MPToken amendment; altnet uses NFTokenMint
+// for the same purpose. Production path will migrate to MPT once live on mainnet.
 async function tokenizeInvoiceAsMPT({ issuerSeed, tradeId, invoiceAmount, dueDate, invoiceHash }) {
   const c = await connectXRPL()
   const wallet = xrpl.Wallet.fromSeed(issuerSeed)
@@ -144,12 +146,17 @@ async function tokenizeInvoiceAsMPT({ issuerSeed, tradeId, invoiceAmount, dueDat
   })
 
   const tx = {
-    TransactionType: "MPTokenIssuanceCreate",
+    TransactionType: "NFTokenMint",
     Account: wallet.classicAddress,
-    AssetScale: 2,
-    MaximumAmount: String(Math.round(invoiceAmount * 100)),
-    MPTokenMetadata: Buffer.from(metadata).toString("hex").toUpperCase(),
-    Flags: 0x00000040
+    NFTokenTaxon: 0,
+    Flags: 8, // tfTransferable
+    URI: Buffer.from(metadata).toString("hex").toUpperCase(),
+    Memos: [{
+      Memo: {
+        MemoType: Buffer.from("TradeFlow/InvoiceTokenization").toString("hex").toUpperCase(),
+        MemoData: Buffer.from(tradeId).toString("hex").toUpperCase()
+      }
+    }]
   }
 
   const prepared = await c.autofill(tx)

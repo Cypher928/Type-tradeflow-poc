@@ -146,7 +146,7 @@ async function main() {
   ok("EscrowFinish", finishResult)
 
   // ── STEP 7 — Tokenise invoice as MPT ────────────────────────────────────
-  header("STEP 7 — Tokenise Invoice as MPT (RWA)")
+  header("STEP 7 — Tokenise Invoice as NFT/RWA (NFTokenMint)")
   const mptResult = await tokenizeInvoiceAsMPT({
     issuerSeed: exporter.seed,
     tradeId,
@@ -171,7 +171,7 @@ async function main() {
   console.log(`  ├─ Reconciliation      → ${reconResult.explorerUrl}`)
   console.log(`  ├─ EscrowCreate        → ${escrowResult.explorerUrl}`)
   console.log(`  ├─ EscrowFinish        → ${finishResult.explorerUrl}`)
-  console.log(`  └─ MPT Tokenisation    → ${mptResult.explorerUrl}`)
+  console.log(`  └─ NFT Tokenisation    → ${mptResult.explorerUrl}`)
   console.log(`\n  Trade ID   : ${tradeId}`)
   console.log(`  Invoice ID : ${invoiceHash}`)
   console.log(`\n${summaryLine}\n`)
