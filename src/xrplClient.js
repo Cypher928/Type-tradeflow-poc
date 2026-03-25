@@ -230,6 +230,19 @@ async function finishEscrow({ finisherSeed, escrowOwner, escrowSequence }) {
   }
 }
 
+// ─── Trust line query ─────────────────────────────────────────────────────────
+async function getTrustLines(address) {
+  const c = await connectXRPL()
+  const response = await c.request({ command: "account_lines", account: address, ledger_index: "validated" })
+  return response.result.lines.map(line => ({
+    currency: line.currency,
+    issuer: line.account,
+    balance: line.balance,
+    limit: line.limit,
+    limitPeer: line.limit_peer
+  }))
+}
+
 // ─── Wallet helpers ───────────────────────────────────────────────────────────
 async function fundTestnetWallet() {
   const c = await connectXRPL()
@@ -254,6 +267,7 @@ module.exports = {
   sendTestPayment,
   sendRLUSDPayment,
   setRLUSDTrustLine,
+  getTrustLines,
   recordReconciliationOnChain,
   tokenizeInvoiceAsMPT,
   createEscrow,

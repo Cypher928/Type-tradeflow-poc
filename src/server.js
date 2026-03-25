@@ -197,6 +197,62 @@ async function recordReconciliation(seed, data) {
   };
 }
 
+// ─── Trust line endpoints ──────────────────────────────────────────────────────
+
+// GET /trust-lines/:address — list all trust lines for an XRPL account
+app.get('/trust-lines/:address', async (req, res) => {
+  const { address } = req.params;
+  if (!xrpl.isValidAddress(address)) {
+    return res.status(400).json({ error: 'Invalid XRPL address' });
+  }
+  try {
+    const c = await getClient();
+    const response = await c.request({ command: 'account_lines', account: address, ledger_index: 'validated' });
+    const lines = response.result.lines.map(line => ({
+      currency: line.currency,
+      issuer: line.account,
+      balance: line.balance,
+      limit: line.limit,
+      limitPeer: line.limit_peer
+    }));
+    res.json({ success: true, address, trustLines: lines });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /trust-line — set RLUSD trust line for a wallet
+app.post('/trust-line', async (req, res) => {
+  const { walletSeed, limit } = req.body;
+  if (!walletSeed) return res.status(400).json({ error: 'walletSeed is required' });
+
+  try {
+    const c = await getClient();
+    const wallet = xrpl.Wallet.fromSeed(walletSeed);
+    const RLUSD_ISSUER = process.env.RLUSD_ISSUER || 'rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV';
+    const tx = {
+      TransactionType: 'TrustSet',
+      Account: wallet.address,
+      LimitAmount: {
+        currency: '524C555344000000000000000000000000000000',
+        issuer: RLUSD_ISSUER,
+        value: String(limit || '1000000')
+      }
+    };
+    const prepared = await c.autofill(tx);
+    const signed = wallet.sign(prepared);
+    const result = await c.submitAndWait(signed.tx_blob);
+    res.json({
+      success: true,
+      hash: result.result.hash,
+      status: result.result.meta.TransactionResult,
+      explorerUrl: `https://testnet.xrpl.org/transactions/${result.result.hash}`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', network: 'XRPL Testnet', timestamp: new Date().toISOString() });

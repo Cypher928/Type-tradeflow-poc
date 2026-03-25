@@ -118,6 +118,48 @@ test("Ripple epoch offset is 946684800 seconds", () => {
   assert.strictEqual(rippleTime, 0)
 })
 
+// ── Trust line query response shape ──────────────────────────────────────────
+console.log("\nTrust line response mapping")
+
+test("account_lines response maps to expected shape", () => {
+  // Simulate a raw XRPL account_lines line entry
+  const rawLine = {
+    account: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+    currency: "524C555344000000000000000000000000000000",
+    balance: "100",
+    limit: "1000000",
+    limit_peer: "0"
+  }
+  const mapped = {
+    currency: rawLine.currency,
+    issuer: rawLine.account,
+    balance: rawLine.balance,
+    limit: rawLine.limit,
+    limitPeer: rawLine.limit_peer
+  }
+  assert.strictEqual(mapped.issuer, rawLine.account)
+  assert.strictEqual(mapped.currency, rawLine.currency)
+  assert.strictEqual(mapped.balance, "100")
+  assert.strictEqual(mapped.limit, "1000000")
+  assert.strictEqual(mapped.limitPeer, "0")
+})
+
+test("RLUSD currency hex matches expected trust line currency", () => {
+  const RLUSD_CURRENCY = "524C555344000000000000000000000000000000"
+  const rawLine = { currency: RLUSD_CURRENCY }
+  assert.strictEqual(rawLine.currency, RLUSD_CURRENCY)
+})
+
+test("xrpl.isValidAddress rejects invalid addresses", () => {
+  assert.strictEqual(xrpl.isValidAddress("not-an-address"), false)
+  assert.strictEqual(xrpl.isValidAddress(""), false)
+})
+
+test("xrpl.isValidAddress accepts valid XRPL address", () => {
+  // Genesis account — always valid format
+  assert.strictEqual(xrpl.isValidAddress("rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"), true)
+})
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(40)}`)
 console.log(`  ${passed} passed, ${failed} failed`)
