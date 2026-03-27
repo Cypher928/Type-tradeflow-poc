@@ -5,7 +5,12 @@ automates expense reconciliation and enables instant RLUSD settlements on the XR
 with RWA tokenization of reconciled invoices for financing.
 
 ---
+## 🚀 Live Demo
 
+Try the TradeFlow dashboard live:  
+**[https://type-tradeflow-poc.vercel.app](https://type-tradeflow-poc.vercel.app)**
+
+> Note: This is a Testnet demo. The full on-chain lifecycle (RLUSD settlements, escrow, NFToken RWA minting) can be run locally with `npm run demo`.
 ## Problem Statement
 
 Traditional trade reconciliation is manual and slow:
