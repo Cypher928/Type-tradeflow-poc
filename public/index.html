@@ -349,24 +349,58 @@
   })
 
   // ── Load trades ───────────────────────────────────────────────────────────
+  function text(str) {
+    const el = document.createElement("span")
+    el.textContent = str
+    return el.textContent  // safe escaped string
+  }
+
+  function makeBadge(status) {
+    const allowed = ["active", "reconciled", "settled"]
+    const span = document.createElement("span")
+    span.className = "badge " + (allowed.includes(status) ? status : "active")
+    span.textContent = status
+    return span
+  }
+
+  function makeTradeItem(t) {
+    const item = document.createElement("div")
+    item.className = "trade-item"
+
+    const id   = document.createElement("span")
+    id.className = "trade-id"
+    id.textContent = t.id
+
+    const meta = document.createElement("span")
+    meta.className = "trade-meta"
+    meta.textContent = `${t.counterpartyName} · $${Number(t.totalValue).toLocaleString()} · Due ${t.dueDate}`
+
+    item.appendChild(id)
+    item.appendChild(meta)
+    item.appendChild(makeBadge(t.status))
+    return item
+  }
+
   async function loadTrades() {
     const list = document.getElementById("tradeList")
     try {
       const r = await fetch(API + "/trades")
       const d = await r.json()
+      list.innerHTML = ""
       if (!d.trades || d.trades.length === 0) {
-        list.innerHTML = '<div class="empty">No trades yet. Create one above.</div>'
+        const empty = document.createElement("div")
+        empty.className = "empty"
+        empty.textContent = "No trades yet. Create one above."
+        list.appendChild(empty)
         return
       }
-      list.innerHTML = d.trades.map(t => `
-        <div class="trade-item">
-          <span class="trade-id">${t.id}</span>
-          <span class="trade-meta">${t.counterpartyName} · $${t.totalValue.toLocaleString()} · Due ${t.dueDate}</span>
-          <span class="badge ${t.status}">${t.status}</span>
-        </div>
-      `).join("")
+      d.trades.forEach(t => list.appendChild(makeTradeItem(t)))
     } catch (e) {
-      list.innerHTML = `<div class="empty">Could not load trades: ${e.message}</div>`
+      list.innerHTML = ""
+      const empty = document.createElement("div")
+      empty.className = "empty"
+      empty.textContent = "Could not load trades: " + e.message
+      list.appendChild(empty)
     }
   }
 
