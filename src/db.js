@@ -80,6 +80,17 @@ db.exec(`
     txid       TEXT,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS aml_log (
+    id          TEXT PRIMARY KEY,
+    ts          TEXT NOT NULL,
+    user_id     TEXT,
+    trade_id    TEXT,
+    amount_usd  REAL,
+    action      TEXT NOT NULL,
+    flag        TEXT,
+    ledger_txid TEXT
+  );
 `)
 
 // Migrate existing DBs — ignore errors if columns already exist
@@ -248,11 +259,22 @@ module.exports = {
   logAudit({ tradeId, userId, action, detail, txid }) {
     const id = crypto.randomUUID()
     db.prepare('INSERT INTO audit_log (id, trade_id, user_id, action, detail, txid, created_at) VALUES (?,?,?,?,?,?,?)')
-      .run(id, tradeId, userId || null, action, detail || null, txid || null, new Date().toISOString())
+      .run(id, tradeId || 'system', userId || null, action, detail || null, txid || null, new Date().toISOString())
   },
 
   getAuditLog(tradeId) {
     return db.prepare('SELECT * FROM audit_log WHERE trade_id = ? ORDER BY created_at ASC').all(tradeId)
+  },
+
+  // ── AML log (persistent, tamper-evident complement to stdout) ─────────────
+  logAml({ userId, tradeId, amountUsd, action, flag, ledgerTxid }) {
+    const id = crypto.randomUUID()
+    db.prepare('INSERT INTO aml_log (id, ts, user_id, trade_id, amount_usd, action, flag, ledger_txid) VALUES (?,?,?,?,?,?,?,?)')
+      .run(id, new Date().toISOString(), userId || null, tradeId || null, amountUsd ?? null, action, flag || null, ledgerTxid || null)
+  },
+
+  getAmlLog() {
+    return db.prepare('SELECT * FROM aml_log ORDER BY ts DESC').all()
   },
 
   // ── KYC ───────────────────────────────────────────────────────────────────

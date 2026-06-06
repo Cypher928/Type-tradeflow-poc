@@ -1,5 +1,7 @@
 'use strict'
 
+const db = require('./db')
+
 const TRAVEL_RULE_THRESHOLD = parseFloat(process.env.TRAVEL_RULE_THRESHOLD || '1000')
 
 function checkTravelRule(amountUsd, kycStatus) {
@@ -12,17 +14,19 @@ function checkTravelRule(amountUsd, kycStatus) {
   return { blocked: false }
 }
 
-// Structured AML log — swap console.log for a SIEM/compliance aggregator in production
-function amlLog({ userId, tradeId, amountUsd, action }) {
+// Write to stdout (for log aggregators) and persist to aml_log table
+function amlLog({ userId, tradeId, amountUsd, action, ledgerTxid }) {
+  const flag = amountUsd > TRAVEL_RULE_THRESHOLD ? 'TRAVEL_RULE_REVIEW' : null
   const entry = {
-    ts:      new Date().toISOString(),
+    ts: new Date().toISOString(),
     userId,
     tradeId: tradeId || null,
     amountUsd,
     action,
-    flag:    amountUsd > TRAVEL_RULE_THRESHOLD ? 'TRAVEL_RULE_REVIEW' : null,
+    flag,
   }
   console.log(`[AML] ${JSON.stringify(entry)}`)
+  db.logAml({ userId, tradeId, amountUsd, action, flag, ledgerTxid })
 }
 
 module.exports = { checkTravelRule, amlLog, TRAVEL_RULE_THRESHOLD }

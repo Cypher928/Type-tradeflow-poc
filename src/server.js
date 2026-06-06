@@ -174,6 +174,21 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
           const explorerUrl = `${explorerBase}/${status.txid}`
           const now = new Date().toISOString()
 
+          // Verify the transaction succeeded on-ledger before advancing state
+          let onChainTx = null
+          try {
+            const c = await getClient()
+            const txResp = await c.request({ command: 'tx', transaction: status.txid })
+            onChainTx = txResp.result
+          } catch (err) {
+            console.warn(`[ledger-verify] Could not fetch ${status.txid}: ${err.message}`)
+          }
+          const ledgerResult = onChainTx?.meta?.TransactionResult
+          if (ledgerResult && ledgerResult !== 'tesSUCCESS') {
+            console.warn(`[ledger-verify] TX ${status.txid} failed on-ledger: ${ledgerResult}`)
+            return res.json({ success: true, ...status, ledgerFailed: true, ledgerResult })
+          }
+
           if (record.action === 'reconcile') {
             db.updateTrade(trade.id, {
               status:        'reconciled',
@@ -187,13 +202,8 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
 
           } else if (record.action === 'escrow_create') {
 
-            // Fetch the TX from XRPL to get the Sequence number needed for EscrowFinish
-            let sequence = null
-            try {
-              const c   = await getClient()
-              const tx  = await c.request({ command: 'tx', transaction: status.txid })
-              sequence  = tx.result.Sequence
-            } catch { /* proceed without sequence — user can look it up */ }
+            // Reuse the already-fetched TX for the Sequence needed by EscrowFinish
+            const sequence = onChainTx?.Sequence ?? null
 
             db.updateTrade(trade.id, {
               status: 'escrowed',
@@ -332,6 +342,10 @@ app.post('/trade/:id/sign-escrow', requireAuth, async (req, res) => {
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
 
+  const travelCheckEscrow = compliance.checkTravelRule(trade.totalValue, user.kycStatus)
+  if (travelCheckEscrow.blocked) return res.status(403).json({ error: travelCheckEscrow.reason })
+  compliance.amlLog({ userId: req.userId, tradeId: trade.id, amountUsd: trade.totalValue, action: 'sign-escrow' })
+
   const { xrpAmount, releaseHours } = req.body
   if (!xrpAmount || !releaseHours)
     return res.status(400).json({ error: 'xrpAmount and releaseHours are required' })
@@ -400,6 +414,10 @@ app.post('/trade/:id/sign-tokenise', requireAuth, async (req, res) => {
   const user = db.getUserById(req.userId)
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
+
+  const travelCheckToken = compliance.checkTravelRule(trade.totalValue, user.kycStatus)
+  if (travelCheckToken.blocked) return res.status(403).json({ error: travelCheckToken.reason })
+  compliance.amlLog({ userId: req.userId, tradeId: trade.id, amountUsd: trade.totalValue, action: 'sign-tokenise' })
 
   const metadata = JSON.stringify({
     type:          'TradeFinanceInvoice',
@@ -605,6 +623,39 @@ app.get('/kyc/status', requireAuth, (req, res) => {
       ? 'KYC verification is pending. Full KYC/KYB onboarding (Sumsub) will be required before mainnet.'
       : `KYC status: ${user.kycStatus}`
   })
+})
+
+// POST /kyc/webhook — KYC provider posts status updates here (Sumsub, Onfido, Persona, etc.)
+// Set KYC_WEBHOOK_SECRET in .env; the provider signs the body with HMAC-SHA256.
+app.post('/kyc/webhook', (req, res) => {
+  const secret = process.env.KYC_WEBHOOK_SECRET
+  if (secret) {
+    const sig      = req.headers['x-kyc-signature'] || ''
+    const expected = crypto.createHmac('sha256', secret).update(JSON.stringify(req.body)).digest('hex')
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)))
+      return res.status(401).json({ error: 'Invalid webhook signature' })
+  }
+  const { userId, status } = req.body
+  if (!userId || !['pending', 'verified', 'rejected'].includes(status))
+    return res.status(400).json({ error: 'userId and status (pending|verified|rejected) required' })
+  db.setKycStatus(userId, status)
+  db.logAudit({ userId, action: 'kyc_status_updated', detail: status })
+  compliance.amlLog({ userId, amountUsd: 0, action: `kyc_${status}` })
+  res.json({ success: true })
+})
+
+// PATCH /admin/users/:id/kyc — manual KYC override, requires X-Admin-Secret header
+app.patch('/admin/users/:id/kyc', (req, res) => {
+  const adminSecret = process.env.ADMIN_SECRET
+  if (!adminSecret || req.headers['x-admin-secret'] !== adminSecret)
+    return res.status(403).json({ error: 'Forbidden' })
+  const { status } = req.body
+  if (!['pending', 'verified', 'rejected'].includes(status))
+    return res.status(400).json({ error: 'status must be pending, verified, or rejected' })
+  db.setKycStatus(req.params.id, status)
+  db.logAudit({ userId: req.params.id, action: 'kyc_manual_override', detail: status })
+  compliance.amlLog({ userId: req.params.id, amountUsd: 0, action: `kyc_manual_${status}` })
+  res.json({ success: true })
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════

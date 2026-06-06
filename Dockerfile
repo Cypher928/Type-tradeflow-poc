@@ -1,5 +1,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
+# better-sqlite3 requires node-gyp which needs python3 + build tools
+RUN apk add --no-cache python3 make g++
 COPY package.json ./
 RUN npm install --omit=dev
 
