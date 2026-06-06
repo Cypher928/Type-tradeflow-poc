@@ -225,6 +225,18 @@ module.exports = {
     `).all(userId, userId).map(rowToTrade)
   },
 
+  getTradesByUserOrCounterpartyPaged(userId, limit, offset) {
+    return db.prepare(`
+      SELECT * FROM trades WHERE user_id = ? OR counterparty_user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?
+    `).all(userId, userId, limit, offset).map(rowToTrade)
+  },
+
+  countTradesByUserOrCounterparty(userId) {
+    return db.prepare(`
+      SELECT COUNT(*) as count FROM trades WHERE user_id = ? OR counterparty_user_id = ?
+    `).get(userId, userId).count
+  },
+
   setCounterparty(tradeId, counterpartyUserId) {
     db.prepare('UPDATE trades SET counterparty_user_id = ? WHERE id = ?').run(counterpartyUserId, tradeId)
   },

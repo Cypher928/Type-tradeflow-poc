@@ -17,7 +17,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node tests/xrplClient.test.js",
+    "test": "node tests/xrplClient.test.js && node tests/api.test.js",
     "demo": "node scripts/testnet-demo.js",
     "compile:evm": "node scripts/compile-evm.js",
     "deploy:evm": "node scripts/deploy-evm-run.js"
@@ -42,6 +42,7 @@
   "devDependencies": {
     "ethers": "^6.16.0",
     "nodemon": "^3.1.0",
-    "solc": "^0.8.34"
+    "solc": "^0.8.34",
+    "supertest": "^7.2.2"
   }
 }
