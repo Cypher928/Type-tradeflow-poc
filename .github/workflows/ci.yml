@@ -16,10 +16,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
+          # package-lock.json is intentionally gitignored; omit cache: npm
+          # which requires a lock file for its cache key
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run tests
         run: npm test

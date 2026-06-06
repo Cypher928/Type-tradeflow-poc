@@ -48,8 +48,9 @@ test("xrpToDrops(10) === '10000000'", () => {
   assert.strictEqual(xrpl.xrpToDrops(10), "10000000")
 })
 
-test("dropsToXrp('1000000') === '1'", () => {
-  assert.strictEqual(xrpl.dropsToXrp("1000000"), "1")
+test("dropsToXrp('1000000') equals 1", () => {
+  // xrpl v3 returns a number, not a string
+  assert.strictEqual(Number(xrpl.dropsToXrp("1000000")), 1)
 })
 
 test("xrpToDrops(0.000001) === '1'", () => {
@@ -113,8 +114,9 @@ test("unixTimeToRippleTime returns a number", () => {
 
 test("Ripple epoch offset is 946684800 seconds", () => {
   // Ripple epoch starts at 2000-01-01T00:00:00Z
-  const unixEpoch2000 = 946684800
-  const rippleTime = xrpl.unixTimeToRippleTime(unixEpoch2000)
+  // xrpl v3 unixTimeToRippleTime takes milliseconds
+  const unixEpoch2000Ms = 946684800 * 1000
+  const rippleTime = xrpl.unixTimeToRippleTime(unixEpoch2000Ms)
   assert.strictEqual(rippleTime, 0)
 })
 
