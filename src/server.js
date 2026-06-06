@@ -1,6 +1,16 @@
 'use strict'
 
 require('dotenv').config()
+
+// ─── Required environment guard ───────────────────────────────────────────────
+const REQUIRED_ENV = ['JWT_SECRET']
+const missingEnv   = REQUIRED_ENV.filter(k => !process.env[k])
+if (missingEnv.length) {
+  console.error(`[startup] Missing required environment variables: ${missingEnv.join(', ')}`)
+  console.error('[startup] Copy .env.example to .env and fill in the values.')
+  process.exit(1)
+}
+
 const express    = require('express')
 const xrpl       = require('xrpl')
 const crypto     = require('crypto')
