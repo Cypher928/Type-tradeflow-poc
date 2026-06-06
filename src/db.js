@@ -5,10 +5,18 @@ const Database = require('better-sqlite3')
 const path = require('path')
 const fs   = require('fs')
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../data/tradeflow.db')
+const DEFAULT_DB_PATH = path.join(__dirname, '../data/tradeflow.db')
+let DB_PATH = process.env.DB_PATH || DEFAULT_DB_PATH
 
 const dataDir = path.dirname(DB_PATH)
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
+if (!fs.existsSync(dataDir)) {
+  try {
+    fs.mkdirSync(dataDir, { recursive: true })
+  } catch {
+    // Read-only filesystem (e.g. Vercel Lambda) — fall back to /tmp
+    DB_PATH = '/tmp/tradeflow.db'
+  }
+}
 
 const db = new Database(DB_PATH)
 db.pragma('journal_mode = WAL')
