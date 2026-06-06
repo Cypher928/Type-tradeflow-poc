@@ -25,7 +25,7 @@ jobs:
       - name: Run tests
         run: npm test
         env:
-          JWT_SECRET: ci-test-secret
+          JWT_SECRET: ci-test-secret-do-not-use-in-production
           XRPL_NODES: wss://s.altnet.rippletest.net:51233
 
   build:

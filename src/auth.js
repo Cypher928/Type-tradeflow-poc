@@ -3,11 +3,11 @@
 const bcrypt = require('bcryptjs')
 const jwt    = require('jsonwebtoken')
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'change-me-in-production'
+const JWT_SECRET  = process.env.JWT_SECRET
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '7d'
 
-if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'change-me-in-production') {
-  throw new Error('JWT_SECRET must be set in production')
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be set to a strong secret of at least 32 characters')
 }
 
 async function hashPassword(password) {

@@ -76,6 +76,7 @@ async function sendRLUSDPayment({ fromSeed, toAddress, amount, tradeId, invoiceH
 }
 
 // ─── Trust line (required before receiving RLUSD) ────────────────────────────
+// WARNING: accepts a raw wallet seed — for testnet scripts only, never call from API routes.
 async function setRLUSDTrustLine({ walletSeed, limit = "1000000" }) {
   const c = await connectXRPL()
   const wallet = xrpl.Wallet.fromSeed(walletSeed)
@@ -261,12 +262,12 @@ async function getBalances(address) {
 }
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
+// setRLUSDTrustLine intentionally excluded — seed-based signing, scripts only
 module.exports = {
   connectXRPL,
   disconnect,
   sendTestPayment,
   sendRLUSDPayment,
-  setRLUSDTrustLine,
   getTrustLines,
   recordReconciliationOnChain,
   tokenizeInvoiceAsMPT,

@@ -288,6 +288,8 @@ app.get('/trades', requireAuth, (req, res) => {
 app.post('/trade/:id/sign-reconcile', requireAuth, async (req, res) => {
   const trade = db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
 
   const user = db.getUserById(req.userId)
   if (!user?.xrplAddress)
@@ -322,6 +324,8 @@ app.post('/trade/:id/sign-reconcile', requireAuth, async (req, res) => {
 app.post('/trade/:id/sign-escrow', requireAuth, async (req, res) => {
   const trade = db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
   if (trade.status !== 'reconciled') return res.status(400).json({ error: 'Trade must be reconciled before creating an escrow' })
 
   const user = db.getUserById(req.userId)
@@ -360,6 +364,8 @@ app.post('/trade/:id/sign-escrow', requireAuth, async (req, res) => {
 app.post('/trade/:id/sign-finish-escrow', requireAuth, async (req, res) => {
   const trade = db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
   if (trade.status !== 'escrowed' || !trade.escrow)
     return res.status(400).json({ error: 'No active escrow found for this trade' })
 
@@ -387,6 +393,8 @@ app.post('/trade/:id/sign-finish-escrow', requireAuth, async (req, res) => {
 app.post('/trade/:id/sign-tokenise', requireAuth, async (req, res) => {
   const trade = db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
   if (trade.status !== 'settled') return res.status(400).json({ error: 'Trade must be settled before tokenising' })
 
   const user = db.getUserById(req.userId)
@@ -438,6 +446,8 @@ app.post('/trade/:id/sign-tokenise', requireAuth, async (req, res) => {
 app.post('/trade/:id/sign-settle', requireAuth, async (req, res) => {
   const trade = db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
 
   const user = db.getUserById(req.userId)
   if (!user?.xrplAddress)
@@ -541,6 +551,8 @@ app.post('/invite/:token/accept', requireAuth, (req, res) => {
 app.post('/trade/:id/document', requireAuth, upload.single('file'), (req, res) => {
   const trade = db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
 
   let hash, filename, sizeBytes
 
@@ -568,6 +580,8 @@ app.post('/trade/:id/document', requireAuth, upload.single('file'), (req, res) =
 app.get('/trade/:id/documents', requireAuth, (req, res) => {
   const trade = db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
   res.json({ success: true, documents: db.getDocuments(req.params.id) })
 })
 
@@ -575,6 +589,8 @@ app.get('/trade/:id/documents', requireAuth, (req, res) => {
 app.get('/trade/:id/audit', requireAuth, (req, res) => {
   const trade = db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
   res.json({ success: true, log: db.getAuditLog(req.params.id) })
 })
 

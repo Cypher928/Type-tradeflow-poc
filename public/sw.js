@@ -20,7 +20,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
   if (url.pathname.startsWith('/auth') || url.pathname.startsWith('/trade') ||
       url.pathname.startsWith('/xumm') || url.pathname.startsWith('/health') ||
-      url.pathname.startsWith('/invite') || url.pathname.startsWith('/trust')) {
+      url.pathname.startsWith('/invite') || url.pathname.startsWith('/trust') ||
+      url.pathname.startsWith('/kyc')) {
     // API: network only
     return
   }
