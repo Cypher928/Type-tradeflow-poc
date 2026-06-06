@@ -127,28 +127,63 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
     if (status.signed && !record.resolved) {
       db.resolveXummPayload(req.params.uuid, status.txid)
 
-      // Automatically update the trade if this payload is linked to one
       if (record.trade_id) {
         const trade = db.getTradeById(record.trade_id)
         if (trade) {
           const explorerUrl = `https://testnet.xrpl.org/transactions/${status.txid}`
+          const now = new Date().toISOString()
+
           if (record.action === 'reconcile') {
             db.updateTrade(trade.id, {
-              status: 'reconciled',
-              reconciliation: { onChain: { hash: status.txid, explorerUrl }, recordedAt: new Date().toISOString() },
+              status:        'reconciled',
+              reconciliation: { onChain: { hash: status.txid, explorerUrl }, recordedAt: now },
+              escrow:     trade.escrow,
               settlement: trade.settlement,
+              nft:        trade.nft,
             })
+
+          } else if (record.action === 'escrow_create') {
+            // Fetch the TX from XRPL to get the Sequence number needed for EscrowFinish
+            let sequence = null
+            try {
+              const c   = await getClient()
+              const tx  = await c.request({ command: 'tx', transaction: status.txid })
+              sequence  = tx.result.Sequence
+            } catch { /* proceed without sequence — user can look it up */ }
+
+            db.updateTrade(trade.id, {
+              status: 'escrowed',
+              reconciliation: trade.reconciliation,
+              escrow: { txid: status.txid, explorerUrl, owner: status.account, sequence, createdAt: now },
+              settlement: trade.settlement,
+              nft:        trade.nft,
+            })
+
+          } else if (record.action === 'escrow_finish') {
+            db.updateTrade(trade.id, {
+              status: 'settled',
+              reconciliation: trade.reconciliation,
+              escrow:  { ...trade.escrow, finishedTxid: status.txid, finishedExplorerUrl: explorerUrl, finishedAt: now },
+              settlement: { onChain: { hash: status.txid, explorerUrl }, settledAt: now },
+              nft:        trade.nft,
+            })
+
           } else if (record.action === 'settle') {
             db.updateTrade(trade.id, {
               status: 'settled',
               reconciliation: trade.reconciliation,
-              settlement: { onChain: { hash: status.txid, explorerUrl }, settledAt: new Date().toISOString() },
+              escrow:     trade.escrow,
+              settlement: { onChain: { hash: status.txid, explorerUrl }, settledAt: now },
+              nft:        trade.nft,
             })
+
           } else if (record.action === 'tokenise') {
             db.updateTrade(trade.id, {
               status: 'tokenised',
               reconciliation: trade.reconciliation,
-              settlement: { ...(trade.settlement || {}), nft: { txid: status.txid, explorerUrl }, tokenisedAt: new Date().toISOString() },
+              escrow:     trade.escrow,
+              settlement: trade.settlement,
+              nft:        { txid: status.txid, explorerUrl, tokenisedAt: now },
             })
           }
         }
@@ -225,6 +260,110 @@ app.post('/trade/:id/sign-reconcile', requireAuth, async (req, res) => {
   try {
     const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
     db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'reconcile', userId: req.userId })
+    res.json({ success: true, ...result })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /trade/:id/sign-escrow — build EscrowCreate TX and return XUMM payload
+app.post('/trade/:id/sign-escrow', requireAuth, async (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.status !== 'reconciled') return res.status(400).json({ error: 'Trade must be reconciled before creating an escrow' })
+
+  const user = db.getUserById(req.userId)
+  if (!user?.xrplAddress)
+    return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
+
+  const { xrpAmount, releaseHours } = req.body
+  if (!xrpAmount || !releaseHours)
+    return res.status(400).json({ error: 'xrpAmount and releaseHours are required' })
+
+  const RIPPLE_EPOCH_OFFSET = 946684800
+  const releaseTime = Math.floor(Date.now() / 1000) + (Number(releaseHours) * 3600) - RIPPLE_EPOCH_OFFSET
+
+  const txjson = {
+    TransactionType: 'EscrowCreate',
+    Account:         user.xrplAddress,
+    Destination:     trade.counterpartyAddress,
+    Amount:          String(Math.round(Number(xrpAmount) * 1_000_000)), // drops
+    FinishAfter:     releaseTime,
+    Memos: [{ Memo: {
+      MemoType: Buffer.from('TradeFlow/TradeID', 'utf8').toString('hex').toUpperCase(),
+      MemoData: Buffer.from(trade.id,            'utf8').toString('hex').toUpperCase(),
+    }}],
+  }
+
+  try {
+    const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
+    db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'escrow_create', userId: req.userId })
+    res.json({ success: true, ...result })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /trade/:id/sign-finish-escrow — build EscrowFinish TX and return XUMM payload
+app.post('/trade/:id/sign-finish-escrow', requireAuth, async (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.status !== 'escrowed' || !trade.escrow)
+    return res.status(400).json({ error: 'No active escrow found for this trade' })
+
+  const user = db.getUserById(req.userId)
+  if (!user?.xrplAddress)
+    return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
+
+  const txjson = {
+    TransactionType: 'EscrowFinish',
+    Account:         user.xrplAddress,
+    Owner:           trade.escrow.owner,
+    OfferSequence:   trade.escrow.sequence,
+  }
+
+  try {
+    const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
+    db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'escrow_finish', userId: req.userId })
+    res.json({ success: true, ...result })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /trade/:id/sign-tokenise — build NFTokenMint TX and return XUMM payload
+app.post('/trade/:id/sign-tokenise', requireAuth, async (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.status !== 'settled') return res.status(400).json({ error: 'Trade must be settled before tokenising' })
+
+  const user = db.getUserById(req.userId)
+  if (!user?.xrplAddress)
+    return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
+
+  const metadata = JSON.stringify({
+    type:          'TradeFinanceInvoice',
+    tradeId:       trade.id,
+    invoiceAmount: trade.totalValue,
+    dueDate:       trade.dueDate,
+    platform:      'TradeFlow Ledger',
+  })
+
+  const txjson = {
+    TransactionType: 'NFTokenMint',
+    Account:         user.xrplAddress,
+    NFTokenTaxon:    0,
+    Flags:           8, // tfTransferable
+    URI:             Buffer.from(metadata, 'utf8').toString('hex').toUpperCase(),
+    Memos: [{ Memo: {
+      MemoType: Buffer.from('TradeFlow/InvoiceTokenization', 'utf8').toString('hex').toUpperCase(),
+      MemoData: Buffer.from(trade.id,                       'utf8').toString('hex').toUpperCase(),
+    }}],
+  }
+
+  try {
+    const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
+    db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'tokenise', userId: req.userId })
     res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })

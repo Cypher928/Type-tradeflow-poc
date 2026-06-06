@@ -6,167 +6,196 @@
   <title>TradeFlow Ledger</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --border: #30363d;
-      --accent: #238636;
-      --accent-hover: #2ea043;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --success: #3fb950;
-      --warning: #d29922;
-      --error: #f85149;
-      --link: #58a6ff;
+      --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --border:#30363d;
+      --accent:#238636; --accent-h:#2ea043; --text:#e6edf3; --muted:#8b949e;
+      --ok:#3fb950; --warn:#d29922; --err:#f85149; --link:#58a6ff; --purple:#c084fc;
     }
+    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { border-bottom:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; gap:12px; }
+    header h1 { font-size:1.05rem; font-weight:600; flex:1; }
+    .chip { font-size:.72rem; padding:2px 8px; border-radius:12px; font-weight:600; }
+    .chip-green { background:var(--accent); color:#fff; }
+    .header-user { font-size:.8rem; color:var(--muted); display:flex; align-items:center; gap:10px; }
+    .header-user strong { color:var(--text); }
 
-    header { border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; gap: 12px; }
-    header h1 { font-size: 1.1rem; font-weight: 600; flex: 1; }
-    .header-net { font-size: 0.75rem; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 12px; }
-    .header-user { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 10px; }
-    .header-user strong { color: var(--text); }
+    .main { max-width:920px; margin:32px auto; padding:0 20px; display:grid; gap:20px; }
 
-    .main { max-width: 900px; margin: 40px auto; padding: 0 24px; display: grid; gap: 24px; }
+    .hero { text-align:center; padding:28px 0 4px; }
+    .hero h2 { font-size:1.7rem; font-weight:700; margin-bottom:8px; }
+    .hero p { color:var(--muted); font-size:.93rem; }
 
-    .hero { text-align: center; padding: 32px 0 8px; }
-    .hero h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
-    .hero p { color: var(--muted); font-size: 0.95rem; }
+    .pipeline { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
+    .step { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 10px; text-align:center; }
+    .step .num { font-size:.68rem; color:var(--muted); margin-bottom:3px; }
+    .step .label { font-size:.82rem; font-weight:600; }
+    .step .tag { font-size:.68rem; color:var(--muted); margin-top:3px; }
 
-    .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-    .step { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 12px; text-align: center; }
-    .step .num { font-size: 0.7rem; color: var(--muted); margin-bottom: 4px; }
-    .step .label { font-size: 0.85rem; font-weight: 600; }
-    .step .tag { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:22px; }
+    .card h3 { font-size:.95rem; font-weight:600; margin-bottom:14px; }
 
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
-    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
+    .tabs { display:flex; gap:2px; margin-bottom:18px; border-bottom:1px solid var(--border); }
+    .tab { background:none; border:none; color:var(--muted); padding:8px 14px; font-size:.875rem; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; border-radius:0; }
+    .tab.active { color:var(--text); border-bottom-color:var(--accent); font-weight:600; }
 
-    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-    .tab { background: none; border: none; color: var(--muted); padding: 8px 14px; font-size: 0.875rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; border-radius: 0; }
-    .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    label { display:block; font-size:.78rem; color:var(--muted); margin-bottom:4px; }
+    input,select { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:8px 10px; font-size:.875rem; }
+    input:focus,select:focus { outline:none; border-color:var(--link); }
 
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    button { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:.875rem; font-weight:600; cursor:pointer; transition:background .15s; }
+    button:hover { background:var(--accent-h); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--muted); }
+    .btn-ghost:hover { background:var(--surface2); }
+    .btn-sm { padding:4px 10px; font-size:.72rem; }
+    .btn-warn { background:#5a3e00; color:var(--warn); }
+    .btn-warn:hover { background:#7a5400; }
+    .btn-danger { background:#3d0f0f; color:var(--err); }
+    .btn-danger:hover { background:#5c1616; }
 
-    input, select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 0.875rem; }
-    input:focus, select:focus { outline: none; border-color: var(--link); }
+    .resp { margin-top:12px; font-size:.78rem; padding:10px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg); display:none; }
+    .resp.show { display:block; }
+    .resp.ok  { border-color:var(--ok); }
+    .resp.err { border-color:var(--err); }
+    .resp a { color:var(--link); text-decoration:none; }
 
-    button { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 9px 18px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-    button:hover { background: var(--accent-hover); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-    .btn-ghost:hover { background: var(--surface); }
-    .btn-danger { background: #6e1010; color: #f85149; }
-    .btn-danger:hover { background: #8b1414; }
+    /* ── Trade list ── */
+    .trade-list { display:grid; gap:8px; }
+    .trade-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
 
-    .response { margin-top: 14px; font-size: 0.8rem; padding: 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); display: none; }
-    .response.visible { display: block; }
-    .response.ok  { border-color: var(--success); }
-    .response.err { border-color: var(--error); }
-    .response a { color: var(--link); text-decoration: none; }
+    .trade-summary {
+      padding:12px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      cursor:pointer; user-select:none;
+    }
+    .trade-summary:hover { background:var(--surface2); }
+    .trade-id { font-family:monospace; font-size:.78rem; color:var(--link); white-space:nowrap; }
+    .trade-meta { font-size:.78rem; color:var(--muted); flex:1; min-width:0; }
+    .chevron { color:var(--muted); font-size:.85rem; transition:transform .2s; flex-shrink:0; }
+    .trade-card[open] .chevron { transform:rotate(180deg); }
 
-    .trade-list { display: grid; gap: 10px; }
-    .trade-item { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .trade-id { font-family: monospace; font-size: 0.8rem; color: var(--link); }
-    .trade-meta { font-size: 0.8rem; color: var(--muted); flex: 1; }
-    .trade-actions { display: flex; gap: 6px; }
-    .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
-    .badge.active     { background: #1f3a5f; color: #58a6ff; }
-    .badge.reconciled { background: #2d2a1f; color: #d29922; }
-    .badge.settled    { background: #1a3a1a; color: #3fb950; }
-    .badge.tokenised  { background: #2a1a3a; color: #c084fc; }
+    .trade-detail {
+      display:none; border-top:1px solid var(--border); padding:16px;
+      background:var(--surface); font-size:.82rem;
+    }
+    .trade-card[open] .trade-detail { display:block; }
 
-    .empty { color: var(--muted); font-size: 0.875rem; text-align: center; padding: 24px; }
+    .badge { font-size:.68rem; padding:2px 8px; border-radius:10px; font-weight:600; white-space:nowrap; }
+    .badge.active     { background:#1f3a5f; color:var(--link); }
+    .badge.reconciled { background:#2d2a1f; color:var(--warn); }
+    .badge.escrowed   { background:#1e2a3a; color:#60a5fa; }
+    .badge.settled    { background:#1a3a1a; color:var(--ok); }
+    .badge.tokenised  { background:#2a1a3a; color:var(--purple); }
 
-    /* ── XUMM Modal ────────────────────────────────────────────────────────── */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 100; }
-    .modal-overlay.open { display: flex; }
-    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 340px; text-align: center; }
-    .modal h3 { font-size: 1rem; margin-bottom: 8px; }
-    .modal p { font-size: 0.8rem; color: var(--muted); margin-bottom: 16px; }
-    .modal img { width: 200px; height: 200px; border-radius: 8px; margin-bottom: 16px; }
-    .modal .deep-link { font-size: 0.75rem; color: var(--link); word-break: break-all; }
-    .modal .status-msg { margin-top: 14px; font-size: 0.8rem; }
+    /* ── Timeline ── */
+    .timeline { display:grid; gap:10px; margin-bottom:16px; }
+    .tl-row { display:flex; align-items:flex-start; gap:10px; }
+    .tl-icon { font-size:.9rem; width:20px; text-align:center; flex-shrink:0; margin-top:1px; }
+    .tl-body { flex:1; }
+    .tl-label { font-weight:600; color:var(--text); }
+    .tl-sub { color:var(--muted); font-size:.75rem; margin-top:2px; }
+    .tl-sub a { color:var(--link); text-decoration:none; }
+    .tl-sub a:hover { text-decoration:underline; }
 
-    /* ── Auth gate ─────────────────────────────────────────────────────────── */
-    #authGate { display: none; }
-    #appContent { display: none; }
+    /* ── Action panel ── */
+    .action-panel { border-top:1px solid var(--border); padding-top:14px; }
+    .action-panel h4 { font-size:.82rem; font-weight:600; color:var(--muted); margin-bottom:10px; text-transform:uppercase; letter-spacing:.05em; }
+    .action-row { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+    .action-row > div { flex:1; min-width:100px; }
+    .action-row button { flex-shrink:0; align-self:flex-end; }
 
-    footer { text-align: center; padding: 40px 24px 24px; color: var(--muted); font-size: 0.75rem; }
-    footer a { color: var(--link); text-decoration: none; }
+    /* ── Escrow info ── */
+    .escrow-info { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px; margin-bottom:10px; font-size:.78rem; }
+    .escrow-info dt { color:var(--muted); display:inline; }
+    .escrow-info dd { display:inline; margin:0 14px 0 4px; }
 
-    @media (max-width: 600px) {
-      .form-row { grid-template-columns: 1fr; }
-      header { padding: 12px 16px; }
-      .main { margin: 20px auto; }
+    /* ── XUMM Modal ── */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center; z-index:100; }
+    .overlay.open { display:flex; }
+    .modal { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:26px; width:320px; text-align:center; }
+    .modal h3 { font-size:.95rem; margin-bottom:6px; }
+    .modal p { font-size:.78rem; color:var(--muted); margin-bottom:14px; }
+    .modal img { width:190px; height:190px; border-radius:8px; margin-bottom:12px; display:block; margin-inline:auto; }
+    .modal .dl-link { font-size:.72rem; color:var(--link); }
+    .modal .sign-status { margin-top:12px; font-size:.78rem; min-height:20px; }
+
+    .empty { color:var(--muted); font-size:.875rem; text-align:center; padding:28px; }
+
+    footer { text-align:center; padding:36px 20px 20px; color:var(--muted); font-size:.72rem; }
+    footer a { color:var(--link); text-decoration:none; }
+
+    @media (max-width:600px) {
+      .form-row { grid-template-columns:1fr; }
+      header { padding:12px 16px; }
+      .main { margin:16px auto; }
+      .action-row { flex-direction:column; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
   <h1>TradeFlow Ledger</h1>
-  <span class="header-net">Testnet</span>
+  <span class="chip chip-green">Testnet</span>
   <div class="header-user" id="headerUser" style="display:none">
     <strong id="headerEmail"></strong>
-    <button class="btn-ghost" style="padding:4px 10px;font-size:0.75rem" id="btnLogout">Sign out</button>
+    <span id="headerWallet" style="font-size:.72rem;color:var(--muted);font-family:monospace"></span>
+    <button class="btn-ghost btn-sm" id="btnLogout">Sign out</button>
   </div>
 </header>
 
-<!-- ── Auth gate ─────────────────────────────────────────────────────────────── -->
-<div class="main" id="authGate">
+<!-- ═══ AUTH GATE ════════════════════════════════════════════════════════════ -->
+<div class="main" id="authGate" style="display:none">
   <div class="hero">
     <h2>Trade Finance on the XRP Ledger</h2>
     <p>Sign in to create trades, reconcile, and settle with RLUSD.</p>
   </div>
-  <div class="card" style="max-width:420px;margin:0 auto;width:100%">
+  <div class="card" style="max-width:400px;margin:0 auto;width:100%">
     <div class="tabs">
-      <button class="tab active" id="tabLogin" onclick="switchTab('login')">Sign in</button>
-      <button class="tab" id="tabRegister" onclick="switchTab('register')">Create account</button>
+      <button class="tab active" onclick="switchTab('login')">Sign in</button>
+      <button class="tab" onclick="switchTab('register')">Create account</button>
     </div>
     <div id="loginForm">
-      <div style="margin-bottom:12px"><label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com" /></div>
-      <div style="margin-bottom:16px"><label>Password</label><input id="loginPassword" type="password" placeholder="••••••••" /></div>
-      <button id="btnLogin">Sign in</button>
+      <div style="margin-bottom:10px"><label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com" /></div>
+      <div style="margin-bottom:14px"><label>Password</label><input id="loginPassword" type="password" placeholder="••••••••" /></div>
+      <button id="btnLogin" style="width:100%">Sign in</button>
     </div>
     <div id="registerForm" style="display:none">
-      <div style="margin-bottom:12px"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com" /></div>
-      <div style="margin-bottom:16px"><label>Password <span style="color:var(--muted)">(min 8 chars)</span></label><input id="regPassword" type="password" placeholder="••••••••" /></div>
-      <button id="btnRegister">Create account</button>
+      <div style="margin-bottom:10px"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com" /></div>
+      <div style="margin-bottom:14px"><label>Password <span style="color:var(--muted)">(min 8 chars)</span></label><input id="regPassword" type="password" placeholder="••••••••" /></div>
+      <button id="btnRegister" style="width:100%">Create account</button>
     </div>
-    <div class="response" id="authResp"></div>
+    <div class="resp" id="authResp"></div>
   </div>
 </div>
 
-<!-- ── Main app ───────────────────────────────────────────────────────────────── -->
-<div class="main" id="appContent">
+<!-- ═══ MAIN APP ══════════════════════════════════════════════════════════════ -->
+<div class="main" id="appContent" style="display:none">
 
   <div class="hero">
     <h2>Trade Finance on the XRP Ledger</h2>
-    <p>Create trades, reconcile on-chain, and settle with RLUSD — all via Xaman wallet.</p>
+    <p>Create trades · Reconcile on-chain · Escrow · Settle with RLUSD · Tokenise as RWA</p>
   </div>
 
   <div class="pipeline">
-    <div class="step"><div class="num">01</div><div class="label">Create Trade</div><div class="tag">REST API</div></div>
+    <div class="step"><div class="num">01</div><div class="label">Create</div><div class="tag">REST API</div></div>
     <div class="step"><div class="num">02</div><div class="label">Reconcile</div><div class="tag">XRPL Memo</div></div>
     <div class="step"><div class="num">03</div><div class="label">Escrow</div><div class="tag">EscrowCreate</div></div>
     <div class="step"><div class="num">04</div><div class="label">Settle</div><div class="tag">RLUSD Payment</div></div>
-    <div class="step"><div class="num">05</div><div class="label">Tokenise</div><div class="tag">MPT / RWA</div></div>
+    <div class="step"><div class="num">05</div><div class="label">Tokenise</div><div class="tag">NFT / RWA</div></div>
   </div>
 
   <!-- Wallet link -->
   <div class="card" id="walletCard">
     <h3>Your XRPL Wallet</h3>
-    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px">Link your XRPL address so TradeFlow can build transactions for you to sign in Xaman — your keys never leave your device.</p>
-    <div style="display:flex;gap:10px;align-items:flex-end">
-      <div style="flex:1"><label>XRPL Address</label><input id="walletAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" /></div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Link your address so TradeFlow can build transactions for you to sign in the <strong>Xaman</strong> app. Your keys never leave your device.</p>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px"><label>XRPL Address</label><input id="walletAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" /></div>
       <button id="btnLinkWallet">Link wallet</button>
     </div>
-    <div class="response" id="walletResp"></div>
+    <div class="resp" id="walletResp"></div>
   </div>
 
   <!-- Create trade -->
@@ -181,35 +210,36 @@
       <div><label>Due Date</label><input id="dueDate" type="date" /></div>
     </div>
     <button id="btnCreateTrade">Create Trade</button>
-    <div class="response" id="createResp"></div>
+    <div class="resp" id="createResp"></div>
   </div>
 
-  <!-- Active trades -->
+  <!-- Trade list -->
   <div class="card">
-    <h3>Your Trades <button class="btn-ghost" id="btnRefresh" style="float:right;padding:4px 10px;font-size:0.75rem">Refresh</button></h3>
-    <div class="trade-list" id="tradeList"><div class="empty">No trades yet.</div></div>
+    <h3>
+      Your Trades
+      <button class="btn-ghost btn-sm" id="btnRefresh" style="float:right">Refresh</button>
+    </h3>
+    <div class="trade-list" id="tradeList"><div class="empty">No trades yet. Create one above.</div></div>
   </div>
 
   <!-- Health -->
   <div class="card">
     <h3>Node Status</h3>
     <button id="btnHealth">Check /health</button>
-    <div class="response" id="healthResp"></div>
+    <div class="resp" id="healthResp"></div>
   </div>
 
 </div>
 
-<!-- ── XUMM signing modal ──────────────────────────────────────────────────────── -->
-<div class="modal-overlay" id="xummModal">
+<!-- ═══ XUMM MODAL ════════════════════════════════════════════════════════════ -->
+<div class="overlay" id="xummOverlay">
   <div class="modal">
     <h3>Sign with Xaman</h3>
-    <p>Scan the QR code in your Xaman app to sign this transaction. Your keys never leave your device.</p>
-    <img id="xummQR" src="" alt="XUMM QR code" />
-    <div>
-      <a class="deep-link" id="xummDeepLink" href="#" target="_blank">Open in Xaman app →</a>
-    </div>
-    <div class="status-msg" id="xummStatus">Waiting for signature…</div>
-    <button class="btn-danger" style="margin-top:16px;width:100%" id="btnCloseModal">Cancel</button>
+    <p>Scan the QR code in your Xaman app. Your keys never leave your device.</p>
+    <img id="xummQR" src="" alt="Xaman QR" />
+    <div><a class="dl-link" id="xummDeepLink" href="#" target="_blank">Open in Xaman app →</a></div>
+    <div class="sign-status" id="xummStatus">Waiting for signature…</div>
+    <button class="btn-danger btn-sm" style="margin-top:14px;width:100%" id="btnCloseModal">Cancel</button>
   </div>
 </div>
 
@@ -224,290 +254,400 @@
   let token = localStorage.getItem("tf_token") || null
   let currentUser = null
   let xummPollTimer = null
+  let refreshTimer  = null
 
-  // ── Auth helpers ──────────────────────────────────────────────────────────
-  function authHeaders() {
-    return { "Content-Type": "application/json", ...(token ? { "Authorization": "Bearer " + token } : {}) }
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id)
+
+  function authH() {
+    return { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) }
   }
 
-  function showResp(el, ok, msg) {
+  function resp(el, ok, msg) {
     el.textContent = msg
-    el.className = "response visible " + (ok ? "ok" : "err")
+    el.className = "resp show " + (ok ? "ok" : "err")
   }
 
-  function showRespHTML(el, ok, html) {
-    el.innerHTML = ""
-    const safe = document.createElement("span")
-    safe.textContent = html
-    // For links we allow manually constructed anchor elements below
-    el.appendChild(safe)
-    el.className = "response visible " + (ok ? "ok" : "err")
+  function switchTab(t) {
+    $("loginForm").style.display    = t === "login"    ? "" : "none"
+    $("registerForm").style.display = t === "register" ? "" : "none"
+    document.querySelectorAll(".tab").forEach((b, i) => b.classList.toggle("active", (i === 0) === (t === "login")))
   }
 
-  function switchTab(tab) {
-    document.getElementById("loginForm").style.display    = tab === "login"    ? "" : "none"
-    document.getElementById("registerForm").style.display = tab === "register" ? "" : "none"
-    document.getElementById("tabLogin").classList.toggle("active",    tab === "login")
-    document.getElementById("tabRegister").classList.toggle("active", tab === "register")
-  }
-
+  // ── Session ───────────────────────────────────────────────────────────────
   function setLoggedIn(user, tok) {
     token = tok
     currentUser = user
     if (tok) localStorage.setItem("tf_token", tok)
-    document.getElementById("authGate").style.display   = "none"
-    document.getElementById("appContent").style.display = "grid"
-    document.getElementById("headerUser").style.display = "flex"
-    document.getElementById("headerEmail").textContent  = user.email
+    $("authGate").style.display   = "none"
+    $("appContent").style.display = "grid"
+    $("headerUser").style.display = "flex"
+    $("headerEmail").textContent  = user.email
+    $("headerWallet").textContent = user.xrplAddress ? shorten(user.xrplAddress) : ""
     if (user.xrplAddress) {
-      document.getElementById("walletAddr").value = user.xrplAddress
-      document.getElementById("walletCard").style.opacity = "0.6"
+      $("walletAddr").value = user.xrplAddress
+      $("walletCard").style.opacity = "0.55"
     }
+    startAutoRefresh()
     loadTrades()
   }
 
   function setLoggedOut() {
-    token = null
-    currentUser = null
+    token = null; currentUser = null
     localStorage.removeItem("tf_token")
-    document.getElementById("authGate").style.display   = "grid"
-    document.getElementById("appContent").style.display = "none"
-    document.getElementById("headerUser").style.display = "none"
+    $("authGate").style.display   = "grid"
+    $("appContent").style.display = "none"
+    $("headerUser").style.display = "none"
+    stopAutoRefresh()
   }
 
-  // ── Boot: check existing token ────────────────────────────────────────────
+  function shorten(addr) {
+    return addr ? addr.slice(0, 6) + "…" + addr.slice(-4) : ""
+  }
+
   async function boot() {
     if (!token) { setLoggedOut(); return }
     try {
-      const r = await fetch(API + "/auth/me", { headers: authHeaders() })
+      const r = await fetch(API + "/auth/me", { headers: authH() })
       const d = await r.json()
       if (d.success) setLoggedIn(d.user, token)
       else setLoggedOut()
     } catch { setLoggedOut() }
   }
 
-  // ── Login ─────────────────────────────────────────────────────────────────
-  document.getElementById("btnLogin").addEventListener("click", async () => {
-    const el  = document.getElementById("authResp")
-    const body = { email: document.getElementById("loginEmail").value.trim(), password: document.getElementById("loginPassword").value }
-    if (!body.email || !body.password) return showResp(el, false, "Email and password are required.")
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  $("btnLogin").addEventListener("click", async () => {
+    const el = $("authResp")
+    const body = { email: $("loginEmail").value.trim(), password: $("loginPassword").value }
+    if (!body.email || !body.password) return resp(el, false, "Email and password are required.")
     try {
       const r = await fetch(API + "/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       const d = await r.json()
-      if (d.success) setLoggedIn(d.user, d.token)
-      else showResp(el, false, d.error || "Login failed")
-    } catch (e) { showResp(el, false, e.message) }
+      d.success ? setLoggedIn(d.user, d.token) : resp(el, false, d.error || "Login failed")
+    } catch (e) { resp(el, false, e.message) }
   })
 
-  // ── Register ──────────────────────────────────────────────────────────────
-  document.getElementById("btnRegister").addEventListener("click", async () => {
-    const el   = document.getElementById("authResp")
-    const body = { email: document.getElementById("regEmail").value.trim(), password: document.getElementById("regPassword").value }
-    if (!body.email || !body.password) return showResp(el, false, "Email and password are required.")
+  $("btnRegister").addEventListener("click", async () => {
+    const el = $("authResp")
+    const body = { email: $("regEmail").value.trim(), password: $("regPassword").value }
+    if (!body.email || !body.password) return resp(el, false, "Email and password are required.")
     try {
       const r = await fetch(API + "/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       const d = await r.json()
-      if (d.success) setLoggedIn(d.user, d.token)
-      else showResp(el, false, d.error || "Registration failed")
-    } catch (e) { showResp(el, false, e.message) }
+      d.success ? setLoggedIn(d.user, d.token) : resp(el, false, d.error || "Registration failed")
+    } catch (e) { resp(el, false, e.message) }
   })
 
-  // ── Logout ────────────────────────────────────────────────────────────────
-  document.getElementById("btnLogout").addEventListener("click", setLoggedOut)
+  $("btnLogout").addEventListener("click", setLoggedOut)
 
-  // ── Link wallet ───────────────────────────────────────────────────────────
-  document.getElementById("btnLinkWallet").addEventListener("click", async () => {
-    const el  = document.getElementById("walletResp")
-    const addr = document.getElementById("walletAddr").value.trim()
-    if (!addr) return showResp(el, false, "Enter your XRPL address.")
+  // ── Wallet link ───────────────────────────────────────────────────────────
+  $("btnLinkWallet").addEventListener("click", async () => {
+    const el = $("walletResp")
+    const xrplAddress = $("walletAddr").value.trim()
+    if (!xrplAddress) return resp(el, false, "Enter your XRPL address.")
     try {
-      const r = await fetch(API + "/auth/wallet", { method: "POST", headers: authHeaders(), body: JSON.stringify({ xrplAddress: addr }) })
+      const r = await fetch(API + "/auth/wallet", { method: "POST", headers: authH(), body: JSON.stringify({ xrplAddress }) })
       const d = await r.json()
       if (d.success) {
         currentUser = d.user
-        showResp(el, true, "Wallet linked: " + d.user.xrplAddress)
-        document.getElementById("walletCard").style.opacity = "0.6"
-      } else showResp(el, false, d.error || "Failed to link wallet")
-    } catch (e) { showResp(el, false, e.message) }
+        $("headerWallet").textContent = shorten(d.user.xrplAddress)
+        $("walletCard").style.opacity = "0.55"
+        resp(el, true, "Wallet linked: " + d.user.xrplAddress)
+      } else resp(el, false, d.error || "Failed")
+    } catch (e) { resp(el, false, e.message) }
   })
 
   // ── Health ────────────────────────────────────────────────────────────────
-  document.getElementById("btnHealth").addEventListener("click", async () => {
-    const el = document.getElementById("healthResp")
+  $("btnHealth").addEventListener("click", async () => {
+    const el = $("healthResp")
     try {
       const r = await fetch(API + "/health")
       const d = await r.json()
-      showResp(el, true, "Status: " + d.status + " · Network: " + d.network + " · " + d.timestamp)
-    } catch (e) { showResp(el, false, "Error: " + e.message) }
+      resp(el, true, "Status: " + d.status + " · Network: " + d.network + " · " + d.timestamp)
+    } catch (e) { resp(el, false, "Error: " + e.message) }
   })
 
   // ── Create trade ──────────────────────────────────────────────────────────
-  document.getElementById("btnCreateTrade").addEventListener("click", async () => {
-    const el = document.getElementById("createResp")
+  $("btnCreateTrade").addEventListener("click", async () => {
+    const el = $("createResp")
     const body = {
-      counterpartyName:    document.getElementById("cpName").value.trim(),
-      counterpartyAddress: document.getElementById("cpAddr").value.trim(),
-      totalValue:          document.getElementById("tradeValue").value,
-      dueDate:             document.getElementById("dueDate").value,
+      counterpartyName:    $("cpName").value.trim(),
+      counterpartyAddress: $("cpAddr").value.trim(),
+      totalValue:          $("tradeValue").value,
+      dueDate:             $("dueDate").value,
     }
     if (!body.counterpartyName || !body.counterpartyAddress || !body.totalValue || !body.dueDate)
-      return showResp(el, false, "All fields are required.")
+      return resp(el, false, "All fields are required.")
     try {
-      const r = await fetch(API + "/trade", { method: "POST", headers: authHeaders(), body: JSON.stringify(body) })
+      const r = await fetch(API + "/trade", { method: "POST", headers: authH(), body: JSON.stringify(body) })
       const d = await r.json()
-      if (d.success) { showResp(el, true, "Trade created: " + d.trade.id); loadTrades() }
-      else showResp(el, false, d.error || "Unknown error")
-    } catch (e) { showResp(el, false, e.message) }
+      if (d.success) { resp(el, true, "Trade created: " + d.trade.id); loadTrades() }
+      else resp(el, false, d.error || "Unknown error")
+    } catch (e) { resp(el, false, e.message) }
   })
 
   // ── XUMM modal ────────────────────────────────────────────────────────────
-  function openXummModal(qr_png, deep_link, uuid, onSigned) {
-    document.getElementById("xummQR").src         = qr_png
-    document.getElementById("xummDeepLink").href  = deep_link
-    document.getElementById("xummStatus").textContent = "Waiting for signature…"
-    document.getElementById("xummModal").classList.add("open")
+  function openXumm(qr_png, deep_link, uuid, onSigned) {
+    $("xummQR").src              = qr_png
+    $("xummDeepLink").href       = deep_link
+    $("xummStatus").textContent  = "Waiting for signature…"
+    $("xummOverlay").classList.add("open")
 
-    let attempts = 0
+    let tries = 0
     xummPollTimer = setInterval(async () => {
-      attempts++
-      if (attempts > 120) { clearInterval(xummPollTimer); closeXummModal("Timed out — please try again."); return }
+      if (++tries > 120) { clearInterval(xummPollTimer); closeXumm(); alert("Timed out — please try again."); return }
       try {
-        const r = await fetch(API + "/xumm/payload/" + uuid, { headers: authHeaders() })
+        const r = await fetch(API + "/xumm/payload/" + uuid, { headers: authH() })
         const d = await r.json()
-        if (d.cancelled) { clearInterval(xummPollTimer); closeXummModal("Transaction cancelled in Xaman."); return }
+        if (d.cancelled) { clearInterval(xummPollTimer); closeXumm(); return }
         if (d.signed) {
           clearInterval(xummPollTimer)
-          document.getElementById("xummStatus").textContent = "Signed! TX: " + d.txid
-          setTimeout(() => { closeXummModal(); onSigned(d) }, 1500)
+          $("xummStatus").textContent = "✅ Signed! TX: " + d.txid
+          setTimeout(() => { closeXumm(); loadTrades(); if (onSigned) onSigned(d) }, 1400)
         }
-      } catch { /* network blip, keep polling */ }
+      } catch {}
     }, 2000)
   }
 
-  function closeXummModal(msg) {
+  function closeXumm() {
     clearInterval(xummPollTimer)
-    document.getElementById("xummModal").classList.remove("open")
-    document.getElementById("xummQR").src = ""
+    $("xummOverlay").classList.remove("open")
+    $("xummQR").src = ""
   }
 
-  document.getElementById("btnCloseModal").addEventListener("click", () => closeXummModal())
+  $("btnCloseModal").addEventListener("click", closeXumm)
+
+  // ── Auto-refresh ──────────────────────────────────────────────────────────
+  function startAutoRefresh() {
+    stopAutoRefresh()
+    refreshTimer = setInterval(loadTrades, 15_000)
+  }
+  function stopAutoRefresh() {
+    clearInterval(refreshTimer)
+  }
+
+  // ── XUMM action helper ────────────────────────────────────────────────────
+  async function xummAction(endpoint, body, onSigned) {
+    try {
+      const r = await fetch(API + endpoint, { method: "POST", headers: authH(), body: JSON.stringify(body || {}) })
+      const d = await r.json()
+      if (!d.success) { alert("Error: " + (d.error || "Unknown")); return }
+      openXumm(d.qr_png, d.deep_link, d.uuid, onSigned)
+    } catch (e) { alert("Error: " + e.message) }
+  }
 
   // ── Trade list ────────────────────────────────────────────────────────────
-  function makeBadge(status) {
-    const allowed = ["active", "reconciled", "settled", "tokenised"]
-    const span = document.createElement("span")
-    span.className = "badge " + (allowed.includes(status) ? status : "active")
-    span.textContent = status
-    return span
+  function badge(status) {
+    const allowed = ["active","reconciled","escrowed","settled","tokenised"]
+    const el = document.createElement("span")
+    el.className = "badge " + (allowed.includes(status) ? status : "active")
+    el.textContent = status
+    return el
   }
 
-  function makeActionBtn(label, cls, onClick) {
-    const btn = document.createElement("button")
-    btn.textContent = label
-    btn.className = cls
-    btn.style.cssText = "padding:4px 10px;font-size:0.72rem"
-    btn.addEventListener("click", onClick)
-    return btn
+  function tlRow(icon, label, sub, link) {
+    const row = document.createElement("div")
+    row.className = "tl-row"
+    const ic = document.createElement("span"); ic.className = "tl-icon"; ic.textContent = icon
+    const body = document.createElement("div"); body.className = "tl-body"
+    const lbl = document.createElement("div"); lbl.className = "tl-label"; lbl.textContent = label
+    body.appendChild(lbl)
+    if (sub || link) {
+      const s = document.createElement("div"); s.className = "tl-sub"
+      if (sub) s.appendChild(document.createTextNode(sub))
+      if (link) {
+        if (sub) s.appendChild(document.createTextNode(" · "))
+        const a = document.createElement("a"); a.href = link; a.target = "_blank"; a.textContent = "View on Explorer ↗"
+        s.appendChild(a)
+      }
+      body.appendChild(s)
+    }
+    row.appendChild(ic); row.appendChild(body)
+    return row
   }
 
-  function makeTradeItem(t) {
-    const item = document.createElement("div")
-    item.className = "trade-item"
+  function fmtDate(iso) {
+    return iso ? new Date(iso).toLocaleDateString() : "—"
+  }
 
-    const id = document.createElement("span")
-    id.className = "trade-id"
-    id.textContent = t.id
+  function buildDetail(t) {
+    const div = document.createElement("div")
+    div.className = "trade-detail"
 
-    const meta = document.createElement("span")
-    meta.className = "trade-meta"
-    meta.textContent = t.counterpartyName + " · $" + Number(t.totalValue).toLocaleString() + " · Due " + t.dueDate
+    // ── Timeline ──
+    const tl = document.createElement("div"); tl.className = "timeline"
 
-    const actions = document.createElement("div")
-    actions.className = "trade-actions"
+    const done  = "✅"
+    const pend  = "⬜"
+    const spin  = "⏳"
+
+    const statusRank = { active:0, reconciled:1, escrowed:2, settled:3, tokenised:4 }
+    const rank = statusRank[t.status] ?? 0
+
+    tl.appendChild(tlRow(done, "Trade created", fmtDate(t.createdAt), null))
+
+    if (rank >= 1 && t.reconciliation?.onChain) {
+      tl.appendChild(tlRow(done, "Reconciled on-chain", fmtDate(t.reconciliation.recordedAt), t.reconciliation.onChain.explorerUrl))
+    } else {
+      tl.appendChild(tlRow(rank >= 1 ? done : (t.status === "active" ? spin : pend), "Reconcile", rank >= 1 ? "Complete" : "Pending", null))
+    }
+
+    if (rank >= 2 && t.escrow) {
+      tl.appendChild(tlRow(done, "Escrow created", fmtDate(t.escrow.createdAt), t.escrow.explorerUrl))
+    } else if (rank >= 3 && t.settlement && !t.escrow) {
+      // direct settle — skip escrow step
+    } else if (rank >= 1 && rank < 2) {
+      tl.appendChild(tlRow(pend, "Escrow (optional)", "—", null))
+    }
+
+    if (rank >= 3 && t.settlement?.onChain) {
+      tl.appendChild(tlRow(done, "Settled", fmtDate(t.settlement.settledAt), t.settlement.onChain.explorerUrl))
+    } else {
+      tl.appendChild(tlRow(rank >= 3 ? done : pend, "Settle", rank >= 3 ? "Complete" : "—", null))
+    }
+
+    if (rank >= 4 && t.nft) {
+      tl.appendChild(tlRow(done, "Tokenised as NFT/RWA", fmtDate(t.nft.tokenisedAt), t.nft.explorerUrl))
+    } else {
+      tl.appendChild(tlRow(rank >= 4 ? done : pend, "Tokenise as RWA", rank >= 4 ? "Complete" : "—", null))
+    }
+
+    div.appendChild(tl)
+
+    // ── Action panel ──
+    const ap = document.createElement("div"); ap.className = "action-panel"
 
     if (t.status === "active") {
-      actions.appendChild(makeActionBtn("Reconcile →", "btn-ghost", () => signReconcile(t)))
-    }
-    if (t.status === "reconciled") {
-      actions.appendChild(makeActionBtn("Settle →", "btn-ghost", () => signSettle(t)))
-    }
-    if (t.reconciliation?.onChain?.explorerUrl) {
-      const a = document.createElement("a")
-      a.href = t.reconciliation.onChain.explorerUrl
-      a.target = "_blank"
-      a.textContent = "Recon ↗"
-      a.style.cssText = "font-size:0.72rem;color:var(--link)"
-      actions.appendChild(a)
-    }
-    if (t.settlement?.onChain?.explorerUrl) {
-      const a = document.createElement("a")
-      a.href = t.settlement.onChain.explorerUrl
-      a.target = "_blank"
-      a.textContent = "Settle ↗"
-      a.style.cssText = "font-size:0.72rem;color:var(--link)"
-      actions.appendChild(a)
+      ap.innerHTML = "<h4>Next step</h4>"
+      const row = document.createElement("div"); row.className = "action-row"
+      const shareDiv = document.createElement("div")
+      const shareLabel = document.createElement("label"); shareLabel.textContent = "Your share (USD)"
+      const shareInput = document.createElement("input"); shareInput.type = "number"; shareInput.placeholder = "2500"
+      shareDiv.appendChild(shareLabel); shareDiv.appendChild(shareInput)
+      const btn = document.createElement("button"); btn.textContent = "Reconcile via Xaman"
+      btn.addEventListener("click", () => {
+        const share = parseFloat(shareInput.value)
+        if (!share) return alert("Enter your share amount.")
+        xummAction("/trade/" + t.id + "/sign-reconcile", { yourShare: share })
+      })
+      row.appendChild(shareDiv); row.appendChild(btn)
+      ap.appendChild(row)
+
+    } else if (t.status === "reconciled") {
+      ap.innerHTML = "<h4>Next step — choose one</h4>"
+
+      // Escrow path
+      const escrowRow = document.createElement("div"); escrowRow.className = "action-row"; escrowRow.style.marginBottom = "10px"
+      const amtDiv = document.createElement("div")
+      const amtL = document.createElement("label"); amtL.textContent = "Lock amount (XRP)"
+      const amtI = document.createElement("input"); amtI.type = "number"; amtI.placeholder = "5"
+      amtDiv.appendChild(amtL); amtDiv.appendChild(amtI)
+      const hoursDiv = document.createElement("div")
+      const hoursL = document.createElement("label"); hoursL.textContent = "Release after (hours)"
+      const hoursI = document.createElement("input"); hoursI.type = "number"; hoursI.placeholder = "24"
+      hoursDiv.appendChild(hoursL); hoursDiv.appendChild(hoursI)
+      const escrowBtn = document.createElement("button"); escrowBtn.textContent = "Create Escrow"
+      escrowBtn.addEventListener("click", () => {
+        const xa = parseFloat(amtI.value), rh = parseFloat(hoursI.value)
+        if (!xa || !rh) return alert("Enter lock amount and release hours.")
+        xummAction("/trade/" + t.id + "/sign-escrow", { xrpAmount: xa, releaseHours: rh })
+      })
+      escrowRow.appendChild(amtDiv); escrowRow.appendChild(hoursDiv); escrowRow.appendChild(escrowBtn)
+      ap.appendChild(escrowRow)
+
+      // Direct settle path
+      const settleRow = document.createElement("div"); settleRow.className = "action-row"
+      const settleBtn = document.createElement("button"); settleBtn.className = "btn-warn"; settleBtn.textContent = "Direct Settle (RLUSD)"
+      settleBtn.addEventListener("click", () => {
+        if (!confirm("Skip escrow and settle directly with RLUSD?")) return
+        xummAction("/trade/" + t.id + "/sign-settle", {})
+      })
+      settleRow.appendChild(settleBtn)
+      ap.appendChild(settleRow)
+
+    } else if (t.status === "escrowed") {
+      ap.innerHTML = "<h4>Escrow active</h4>"
+      if (t.escrow) {
+        const info = document.createElement("dl"); info.className = "escrow-info"
+        info.innerHTML = ""
+        const pairs = [
+          ["Owner",    shorten(t.escrow.owner || "")],
+          ["Sequence", t.escrow.sequence ?? "—"],
+          ["Created",  fmtDate(t.escrow.createdAt)],
+        ]
+        pairs.forEach(([k, v]) => {
+          const dt = document.createElement("dt"); dt.textContent = k + ": "
+          const dd = document.createElement("dd"); dd.textContent = v
+          info.appendChild(dt); info.appendChild(dd)
+        })
+        ap.appendChild(info)
+      }
+      const finishRow = document.createElement("div"); finishRow.className = "action-row"
+      const finishBtn = document.createElement("button"); finishBtn.textContent = "Finish Escrow (release funds)"
+      finishBtn.addEventListener("click", () => xummAction("/trade/" + t.id + "/sign-finish-escrow", {}))
+      finishRow.appendChild(finishBtn); ap.appendChild(finishRow)
+
+    } else if (t.status === "settled") {
+      ap.innerHTML = "<h4>Next step</h4>"
+      const row = document.createElement("div"); row.className = "action-row"
+      const btn = document.createElement("button"); btn.textContent = "Tokenise Invoice as NFT/RWA"
+      btn.addEventListener("click", () => xummAction("/trade/" + t.id + "/sign-tokenise", {}))
+      row.appendChild(btn); ap.appendChild(row)
+
+    } else if (t.status === "tokenised") {
+      ap.innerHTML = "<h4 style='color:var(--ok)'>✅ Complete — all 5 steps done</h4>"
     }
 
-    item.appendChild(id)
-    item.appendChild(meta)
-    item.appendChild(makeBadge(t.status))
-    item.appendChild(actions)
-    return item
+    div.appendChild(ap)
+    return div
+  }
+
+  function makeTradeCard(t) {
+    const card = document.createElement("div"); card.className = "trade-card"
+
+    const summary = document.createElement("div"); summary.className = "trade-summary"
+
+    const idEl = document.createElement("span"); idEl.className = "trade-id"; idEl.textContent = t.id
+    const meta = document.createElement("span"); meta.className = "trade-meta"
+    meta.textContent = t.counterpartyName + " · $" + Number(t.totalValue).toLocaleString() + " · Due " + t.dueDate
+    const chev = document.createElement("span"); chev.className = "chevron"; chev.textContent = "▾"
+
+    summary.appendChild(idEl)
+    summary.appendChild(meta)
+    summary.appendChild(badge(t.status))
+    summary.appendChild(chev)
+
+    summary.addEventListener("click", () => {
+      const isOpen = card.hasAttribute("open")
+      isOpen ? card.removeAttribute("open") : card.setAttribute("open", "")
+    })
+
+    card.appendChild(summary)
+    card.appendChild(buildDetail(t))
+    return card
   }
 
   async function loadTrades() {
-    const list = document.getElementById("tradeList")
+    const list = $("tradeList")
     try {
-      const r = await fetch(API + "/trades", { headers: authHeaders() })
+      const r = await fetch(API + "/trades", { headers: authH() })
       const d = await r.json()
       list.innerHTML = ""
       if (!d.trades || d.trades.length === 0) {
-        const empty = document.createElement("div")
-        empty.className = "empty"
-        empty.textContent = "No trades yet. Create one above."
-        list.appendChild(empty)
-        return
+        const e = document.createElement("div"); e.className = "empty"; e.textContent = "No trades yet. Create one above."
+        list.appendChild(e); return
       }
-      d.trades.forEach(t => list.appendChild(makeTradeItem(t)))
+      d.trades.forEach(t => list.appendChild(makeTradeCard(t)))
     } catch (e) {
       list.innerHTML = ""
-      const empty = document.createElement("div")
-      empty.className = "empty"
-      empty.textContent = "Could not load trades: " + e.message
-      list.appendChild(empty)
+      const el = document.createElement("div"); el.className = "empty"; el.textContent = "Could not load trades: " + e.message
+      list.appendChild(el)
     }
   }
 
-  // ── XUMM signing actions ──────────────────────────────────────────────────
-  async function signReconcile(trade) {
-    const share = prompt("Enter your share of the cost (USD):")
-    if (!share) return
-    try {
-      const r = await fetch(API + "/trade/" + trade.id + "/sign-reconcile", {
-        method: "POST", headers: authHeaders(),
-        body: JSON.stringify({ yourShare: parseFloat(share) })
-      })
-      const d = await r.json()
-      if (!d.success) return alert("Error: " + (d.error || "Unknown"))
-      openXummModal(d.qr_png, d.deep_link, d.uuid, () => loadTrades())
-    } catch (e) { alert("Error: " + e.message) }
-  }
-
-  async function signSettle(trade) {
-    try {
-      const r = await fetch(API + "/trade/" + trade.id + "/sign-settle", {
-        method: "POST", headers: authHeaders(), body: JSON.stringify({})
-      })
-      const d = await r.json()
-      if (!d.success) return alert("Error: " + (d.error || "Unknown"))
-      openXummModal(d.qr_png, d.deep_link, d.uuid, () => loadTrades())
-    } catch (e) { alert("Error: " + e.message) }
-  }
-
-  document.getElementById("btnRefresh").addEventListener("click", loadTrades)
+  $("btnRefresh").addEventListener("click", loadTrades)
 
   boot()
 </script>
-
 </body>
 </html>

@@ -11,14 +11,15 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
 
 const db = new Database(DB_PATH)
 db.pragma('journal_mode = WAL')
+db.pragma('foreign_keys = ON')
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
-    id           TEXT PRIMARY KEY,
-    email        TEXT NOT NULL UNIQUE,
+    id            TEXT PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    xrpl_address TEXT,
-    created_at   TEXT NOT NULL
+    xrpl_address  TEXT,
+    created_at    TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS trades (
@@ -31,7 +32,9 @@ db.exec(`
     status               TEXT NOT NULL DEFAULT 'active',
     created_at           TEXT NOT NULL,
     reconciliation       TEXT,
+    escrow               TEXT,
     settlement           TEXT,
+    nft                  TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
@@ -46,6 +49,11 @@ db.exec(`
   );
 `)
 
+// Migrate existing DBs — ignore errors if columns already exist
+for (const col of ['escrow TEXT', 'nft TEXT']) {
+  try { db.exec(`ALTER TABLE trades ADD COLUMN ${col}`) } catch {}
+}
+
 // ─── User statements ──────────────────────────────────────────────────────────
 const userStmts = {
   insert:       db.prepare('INSERT INTO users (id, email, password_hash, created_at) VALUES (@id, @email, @passwordHash, @createdAt)'),
@@ -56,15 +64,17 @@ const userStmts = {
 
 // ─── Trade statements ─────────────────────────────────────────────────────────
 const tradeStmts = {
-  insert:   db.prepare(`
+  insert:     db.prepare(`
     INSERT INTO trades (id, user_id, counterparty_name, counterparty_address, total_value, due_date, status, created_at)
     VALUES (@id, @userId, @counterpartyName, @counterpartyAddress, @totalValue, @dueDate, @status, @createdAt)
   `),
-  findById: db.prepare('SELECT * FROM trades WHERE id = ?'),
-  findAll:  db.prepare('SELECT * FROM trades ORDER BY created_at DESC'),
+  findById:   db.prepare('SELECT * FROM trades WHERE id = ?'),
+  findAll:    db.prepare('SELECT * FROM trades ORDER BY created_at DESC'),
   findByUser: db.prepare('SELECT * FROM trades WHERE user_id = ? ORDER BY created_at DESC'),
-  update:   db.prepare(`
-    UPDATE trades SET status = @status, reconciliation = @reconciliation, settlement = @settlement WHERE id = @id
+  update:     db.prepare(`
+    UPDATE trades
+    SET status = @status, reconciliation = @reconciliation, escrow = @escrow, settlement = @settlement, nft = @nft
+    WHERE id = @id
   `),
 }
 
@@ -87,7 +97,9 @@ function rowToTrade(row) {
     status:              row.status,
     createdAt:           row.created_at,
     reconciliation:      row.reconciliation ? JSON.parse(row.reconciliation) : null,
+    escrow:              row.escrow         ? JSON.parse(row.escrow)         : null,
     settlement:          row.settlement     ? JSON.parse(row.settlement)     : null,
+    nft:                 row.nft            ? JSON.parse(row.nft)            : null,
   }
 }
 
@@ -136,12 +148,14 @@ module.exports = {
     return tradeStmts.findByUser.all(userId).map(rowToTrade)
   },
 
-  updateTrade(id, { status, reconciliation, settlement }) {
+  updateTrade(id, { status, reconciliation, escrow, settlement, nft }) {
     tradeStmts.update.run({
       id,
       status,
       reconciliation: reconciliation ? JSON.stringify(reconciliation) : null,
+      escrow:         escrow         ? JSON.stringify(escrow)         : null,
       settlement:     settlement     ? JSON.stringify(settlement)     : null,
+      nft:            nft            ? JSON.stringify(nft)            : null,
     })
     return rowToTrade(tradeStmts.findById.get(id))
   },
