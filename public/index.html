@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TradeFlow Ledger — Demo</title>
+  <title>TradeFlow Ledger</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -21,145 +21,88 @@
       --link: #58a6ff;
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    header {
-      border-bottom: 1px solid var(--border);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    header { border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.1rem; font-weight: 600; flex: 1; }
+    .header-net { font-size: 0.75rem; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 12px; }
+    .header-user { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+    .header-user strong { color: var(--text); }
 
-    header h1 { font-size: 1.1rem; font-weight: 600; }
-    header span { font-size: 0.75rem; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 12px; }
+    .main { max-width: 900px; margin: 40px auto; padding: 0 24px; display: grid; gap: 24px; }
 
-    .main {
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 0 24px;
-      display: grid;
-      gap: 24px;
-    }
-
-    .hero {
-      text-align: center;
-      padding: 32px 0 8px;
-    }
+    .hero { text-align: center; padding: 32px 0 8px; }
     .hero h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
     .hero p { color: var(--muted); font-size: 0.95rem; }
 
-    .pipeline {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
-    }
-
-    .step {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 12px;
-      text-align: center;
-    }
+    .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+    .step { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 12px; text-align: center; }
     .step .num { font-size: 0.7rem; color: var(--muted); margin-bottom: 4px; }
     .step .label { font-size: 0.85rem; font-weight: 600; }
     .step .tag { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
 
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 24px;
-    }
-
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
     .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
 
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .tab { background: none; border: none; color: var(--muted); padding: 8px 14px; font-size: 0.875rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; border-radius: 0; }
+    .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
 
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
 
-    input, select {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 8px 10px;
-      font-size: 0.875rem;
-    }
+    input, select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 0.875rem; }
     input:focus, select:focus { outline: none; border-color: var(--link); }
 
-    button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 9px 18px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
+    button { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 9px 18px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
     button:hover { background: var(--accent-hover); }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { background: var(--surface); }
+    .btn-danger { background: #6e1010; color: #f85149; }
+    .btn-danger:hover { background: #8b1414; }
 
-    .response {
-      margin-top: 14px;
-      font-size: 0.8rem;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      display: none;
-    }
+    .response { margin-top: 14px; font-size: 0.8rem; padding: 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); display: none; }
     .response.visible { display: block; }
-    .response.ok { border-color: var(--success); }
+    .response.ok  { border-color: var(--success); }
     .response.err { border-color: var(--error); }
-
     .response a { color: var(--link); text-decoration: none; }
-    .response a:hover { text-decoration: underline; }
 
     .trade-list { display: grid; gap: 10px; }
-
-    .trade-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
+    .trade-item { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .trade-id { font-family: monospace; font-size: 0.8rem; color: var(--link); }
-    .trade-meta { font-size: 0.8rem; color: var(--muted); }
-    .badge {
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-weight: 600;
-    }
-    .badge.active    { background: #1f3a5f; color: #58a6ff; }
-    .badge.reconciled{ background: #2d2a1f; color: #d29922; }
-    .badge.settled   { background: #1a3a1a; color: #3fb950; }
+    .trade-meta { font-size: 0.8rem; color: var(--muted); flex: 1; }
+    .trade-actions { display: flex; gap: 6px; }
+    .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+    .badge.active     { background: #1f3a5f; color: #58a6ff; }
+    .badge.reconciled { background: #2d2a1f; color: #d29922; }
+    .badge.settled    { background: #1a3a1a; color: #3fb950; }
+    .badge.tokenised  { background: #2a1a3a; color: #c084fc; }
 
     .empty { color: var(--muted); font-size: 0.875rem; text-align: center; padding: 24px; }
 
-    footer {
-      text-align: center;
-      padding: 40px 24px 24px;
-      color: var(--muted);
-      font-size: 0.75rem;
-    }
+    /* ── XUMM Modal ────────────────────────────────────────────────────────── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 340px; text-align: center; }
+    .modal h3 { font-size: 1rem; margin-bottom: 8px; }
+    .modal p { font-size: 0.8rem; color: var(--muted); margin-bottom: 16px; }
+    .modal img { width: 200px; height: 200px; border-radius: 8px; margin-bottom: 16px; }
+    .modal .deep-link { font-size: 0.75rem; color: var(--link); word-break: break-all; }
+    .modal .status-msg { margin-top: 14px; font-size: 0.8rem; }
+
+    /* ── Auth gate ─────────────────────────────────────────────────────────── */
+    #authGate { display: none; }
+    #appContent { display: none; }
+
+    footer { text-align: center; padding: 40px 24px 24px; color: var(--muted); font-size: 0.75rem; }
     footer a { color: var(--link); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .form-row { grid-template-columns: 1fr; }
+      header { padding: 12px 16px; }
+      .main { margin: 20px auto; }
+    }
   </style>
 </head>
 <body>
@@ -167,102 +110,84 @@
 <header>
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
   <h1>TradeFlow Ledger</h1>
-  <span>Testnet</span>
+  <span class="header-net">Testnet</span>
+  <div class="header-user" id="headerUser" style="display:none">
+    <strong id="headerEmail"></strong>
+    <button class="btn-ghost" style="padding:4px 10px;font-size:0.75rem" id="btnLogout">Sign out</button>
+  </div>
 </header>
 
-<div class="main">
+<!-- ── Auth gate ─────────────────────────────────────────────────────────────── -->
+<div class="main" id="authGate">
+  <div class="hero">
+    <h2>Trade Finance on the XRP Ledger</h2>
+    <p>Sign in to create trades, reconcile, and settle with RLUSD.</p>
+  </div>
+  <div class="card" style="max-width:420px;margin:0 auto;width:100%">
+    <div class="tabs">
+      <button class="tab active" id="tabLogin" onclick="switchTab('login')">Sign in</button>
+      <button class="tab" id="tabRegister" onclick="switchTab('register')">Create account</button>
+    </div>
+    <div id="loginForm">
+      <div style="margin-bottom:12px"><label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com" /></div>
+      <div style="margin-bottom:16px"><label>Password</label><input id="loginPassword" type="password" placeholder="••••••••" /></div>
+      <button id="btnLogin">Sign in</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div style="margin-bottom:12px"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com" /></div>
+      <div style="margin-bottom:16px"><label>Password <span style="color:var(--muted)">(min 8 chars)</span></label><input id="regPassword" type="password" placeholder="••••••••" /></div>
+      <button id="btnRegister">Create account</button>
+    </div>
+    <div class="response" id="authResp"></div>
+  </div>
+</div>
+
+<!-- ── Main app ───────────────────────────────────────────────────────────────── -->
+<div class="main" id="appContent">
 
   <div class="hero">
     <h2>Trade Finance on the XRP Ledger</h2>
-    <p>Create trades, record reconciliation on-chain, and settle with RLUSD — all on XRPL Testnet.</p>
+    <p>Create trades, reconcile on-chain, and settle with RLUSD — all via Xaman wallet.</p>
   </div>
 
-  <!-- Pipeline overview -->
   <div class="pipeline">
-    <div class="step">
-      <div class="num">01</div>
-      <div class="label">Create Trade</div>
-      <div class="tag">REST API</div>
+    <div class="step"><div class="num">01</div><div class="label">Create Trade</div><div class="tag">REST API</div></div>
+    <div class="step"><div class="num">02</div><div class="label">Reconcile</div><div class="tag">XRPL Memo</div></div>
+    <div class="step"><div class="num">03</div><div class="label">Escrow</div><div class="tag">EscrowCreate</div></div>
+    <div class="step"><div class="num">04</div><div class="label">Settle</div><div class="tag">RLUSD Payment</div></div>
+    <div class="step"><div class="num">05</div><div class="label">Tokenise</div><div class="tag">MPT / RWA</div></div>
+  </div>
+
+  <!-- Wallet link -->
+  <div class="card" id="walletCard">
+    <h3>Your XRPL Wallet</h3>
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px">Link your XRPL address so TradeFlow can build transactions for you to sign in Xaman — your keys never leave your device.</p>
+    <div style="display:flex;gap:10px;align-items:flex-end">
+      <div style="flex:1"><label>XRPL Address</label><input id="walletAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" /></div>
+      <button id="btnLinkWallet">Link wallet</button>
     </div>
-    <div class="step">
-      <div class="num">02</div>
-      <div class="label">Reconcile</div>
-      <div class="tag">XRPL Memo</div>
-    </div>
-    <div class="step">
-      <div class="num">03</div>
-      <div class="label">Escrow</div>
-      <div class="tag">EscrowCreate</div>
-    </div>
-    <div class="step">
-      <div class="num">04</div>
-      <div class="label">Settle</div>
-      <div class="tag">RLUSD Payment</div>
-    </div>
-    <div class="step">
-      <div class="num">05</div>
-      <div class="label">Tokenise</div>
-      <div class="tag">MPT / RWA</div>
-    </div>
+    <div class="response" id="walletResp"></div>
   </div>
 
   <!-- Create trade -->
   <div class="card">
     <h3>Create New Trade</h3>
     <div class="form-row">
-      <div>
-        <label for="cpName">Counterparty Name</label>
-        <input id="cpName" type="text" placeholder="Acme Imports Ltd" />
-      </div>
-      <div>
-        <label for="cpAddr">Counterparty XRPL Address</label>
-        <input id="cpAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" />
-      </div>
+      <div><label>Counterparty Name</label><input id="cpName" type="text" placeholder="Acme Imports Ltd" /></div>
+      <div><label>Counterparty XRPL Address</label><input id="cpAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" /></div>
     </div>
     <div class="form-row">
-      <div>
-        <label for="tradeValue">Total Value (USD)</label>
-        <input id="tradeValue" type="number" placeholder="5000" min="1" />
-      </div>
-      <div>
-        <label for="dueDate">Due Date</label>
-        <input id="dueDate" type="date" />
-      </div>
+      <div><label>Total Value (USD)</label><input id="tradeValue" type="number" placeholder="5000" min="1" /></div>
+      <div><label>Due Date</label><input id="dueDate" type="date" /></div>
     </div>
     <button id="btnCreateTrade">Create Trade</button>
     <div class="response" id="createResp"></div>
   </div>
 
-  <!-- Settle (quick) -->
-  <div class="card">
-    <h3>Quick Settlement</h3>
-    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;">
-      Send a direct XRP or RLUSD payment from a wallet seed. Use this for testing the
-      <code>/settle</code> endpoint directly.
-    </p>
-    <div class="form-row">
-      <div>
-        <label for="settleAmount">Amount</label>
-        <input id="settleAmount" type="number" placeholder="10" min="0.000001" step="any" />
-      </div>
-      <div>
-        <label for="settleCurrency">Currency</label>
-        <select id="settleCurrency">
-          <option value="XRP">XRP</option>
-          <option value="RLUSD">RLUSD</option>
-        </select>
-      </div>
-    </div>
-    <button id="btnSettle">Send Payment</button>
-    <div class="response" id="settleResp"></div>
-  </div>
-
   <!-- Active trades -->
   <div class="card">
-    <h3>Active Trades <button id="btnRefresh" style="float:right;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:0.75rem;padding:4px 10px;">Refresh</button></h3>
-    <div class="trade-list" id="tradeList">
-      <div class="empty">No trades yet. Create one above.</div>
-    </div>
+    <h3>Your Trades <button class="btn-ghost" id="btnRefresh" style="float:right;padding:4px 10px;font-size:0.75rem">Refresh</button></h3>
+    <div class="trade-list" id="tradeList"><div class="empty">No trades yet.</div></div>
   </div>
 
   <!-- Health -->
@@ -274,6 +199,20 @@
 
 </div>
 
+<!-- ── XUMM signing modal ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="xummModal">
+  <div class="modal">
+    <h3>Sign with Xaman</h3>
+    <p>Scan the QR code in your Xaman app to sign this transaction. Your keys never leave your device.</p>
+    <img id="xummQR" src="" alt="XUMM QR code" />
+    <div>
+      <a class="deep-link" id="xummDeepLink" href="#" target="_blank">Open in Xaman app →</a>
+    </div>
+    <div class="status-msg" id="xummStatus">Waiting for signature…</div>
+    <button class="btn-danger" style="margin-top:16px;width:100%" id="btnCloseModal">Cancel</button>
+  </div>
+</div>
+
 <footer>
   Built on the <a href="https://xrpl.org" target="_blank">XRP Ledger</a> ·
   <a href="https://testnet.xrpl.org" target="_blank">Testnet Explorer</a> ·
@@ -281,23 +220,125 @@
 </footer>
 
 <script>
-  const API = ""  // same origin — server serves this file
+  const API = ""
+  let token = localStorage.getItem("tf_token") || null
+  let currentUser = null
+  let xummPollTimer = null
 
-  function showResp(el, ok, html) {
-    el.innerHTML = html
+  // ── Auth helpers ──────────────────────────────────────────────────────────
+  function authHeaders() {
+    return { "Content-Type": "application/json", ...(token ? { "Authorization": "Bearer " + token } : {}) }
+  }
+
+  function showResp(el, ok, msg) {
+    el.textContent = msg
     el.className = "response visible " + (ok ? "ok" : "err")
   }
 
-  // ── Health check ──────────────────────────────────────────────────────────
+  function showRespHTML(el, ok, html) {
+    el.innerHTML = ""
+    const safe = document.createElement("span")
+    safe.textContent = html
+    // For links we allow manually constructed anchor elements below
+    el.appendChild(safe)
+    el.className = "response visible " + (ok ? "ok" : "err")
+  }
+
+  function switchTab(tab) {
+    document.getElementById("loginForm").style.display    = tab === "login"    ? "" : "none"
+    document.getElementById("registerForm").style.display = tab === "register" ? "" : "none"
+    document.getElementById("tabLogin").classList.toggle("active",    tab === "login")
+    document.getElementById("tabRegister").classList.toggle("active", tab === "register")
+  }
+
+  function setLoggedIn(user, tok) {
+    token = tok
+    currentUser = user
+    if (tok) localStorage.setItem("tf_token", tok)
+    document.getElementById("authGate").style.display   = "none"
+    document.getElementById("appContent").style.display = "grid"
+    document.getElementById("headerUser").style.display = "flex"
+    document.getElementById("headerEmail").textContent  = user.email
+    if (user.xrplAddress) {
+      document.getElementById("walletAddr").value = user.xrplAddress
+      document.getElementById("walletCard").style.opacity = "0.6"
+    }
+    loadTrades()
+  }
+
+  function setLoggedOut() {
+    token = null
+    currentUser = null
+    localStorage.removeItem("tf_token")
+    document.getElementById("authGate").style.display   = "grid"
+    document.getElementById("appContent").style.display = "none"
+    document.getElementById("headerUser").style.display = "none"
+  }
+
+  // ── Boot: check existing token ────────────────────────────────────────────
+  async function boot() {
+    if (!token) { setLoggedOut(); return }
+    try {
+      const r = await fetch(API + "/auth/me", { headers: authHeaders() })
+      const d = await r.json()
+      if (d.success) setLoggedIn(d.user, token)
+      else setLoggedOut()
+    } catch { setLoggedOut() }
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  document.getElementById("btnLogin").addEventListener("click", async () => {
+    const el  = document.getElementById("authResp")
+    const body = { email: document.getElementById("loginEmail").value.trim(), password: document.getElementById("loginPassword").value }
+    if (!body.email || !body.password) return showResp(el, false, "Email and password are required.")
+    try {
+      const r = await fetch(API + "/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      const d = await r.json()
+      if (d.success) setLoggedIn(d.user, d.token)
+      else showResp(el, false, d.error || "Login failed")
+    } catch (e) { showResp(el, false, e.message) }
+  })
+
+  // ── Register ──────────────────────────────────────────────────────────────
+  document.getElementById("btnRegister").addEventListener("click", async () => {
+    const el   = document.getElementById("authResp")
+    const body = { email: document.getElementById("regEmail").value.trim(), password: document.getElementById("regPassword").value }
+    if (!body.email || !body.password) return showResp(el, false, "Email and password are required.")
+    try {
+      const r = await fetch(API + "/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      const d = await r.json()
+      if (d.success) setLoggedIn(d.user, d.token)
+      else showResp(el, false, d.error || "Registration failed")
+    } catch (e) { showResp(el, false, e.message) }
+  })
+
+  // ── Logout ────────────────────────────────────────────────────────────────
+  document.getElementById("btnLogout").addEventListener("click", setLoggedOut)
+
+  // ── Link wallet ───────────────────────────────────────────────────────────
+  document.getElementById("btnLinkWallet").addEventListener("click", async () => {
+    const el  = document.getElementById("walletResp")
+    const addr = document.getElementById("walletAddr").value.trim()
+    if (!addr) return showResp(el, false, "Enter your XRPL address.")
+    try {
+      const r = await fetch(API + "/auth/wallet", { method: "POST", headers: authHeaders(), body: JSON.stringify({ xrplAddress: addr }) })
+      const d = await r.json()
+      if (d.success) {
+        currentUser = d.user
+        showResp(el, true, "Wallet linked: " + d.user.xrplAddress)
+        document.getElementById("walletCard").style.opacity = "0.6"
+      } else showResp(el, false, d.error || "Failed to link wallet")
+    } catch (e) { showResp(el, false, e.message) }
+  })
+
+  // ── Health ────────────────────────────────────────────────────────────────
   document.getElementById("btnHealth").addEventListener("click", async () => {
     const el = document.getElementById("healthResp")
     try {
       const r = await fetch(API + "/health")
       const d = await r.json()
-      showResp(el, true, `Status: <strong>${d.status}</strong> · Network: ${d.network} · ${d.timestamp}`)
-    } catch (e) {
-      showResp(el, false, `Error: ${e.message}. Is the server running on port 3000?`)
-    }
+      showResp(el, true, "Status: " + d.status + " · Network: " + d.network + " · " + d.timestamp)
+    } catch (e) { showResp(el, false, "Error: " + e.message) }
   })
 
   // ── Create trade ──────────────────────────────────────────────────────────
@@ -309,82 +350,115 @@
       totalValue:          document.getElementById("tradeValue").value,
       dueDate:             document.getElementById("dueDate").value,
     }
-    if (!body.counterpartyName || !body.counterpartyAddress || !body.totalValue || !body.dueDate) {
+    if (!body.counterpartyName || !body.counterpartyAddress || !body.totalValue || !body.dueDate)
       return showResp(el, false, "All fields are required.")
-    }
     try {
-      const r = await fetch(API + "/trade", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      const r = await fetch(API + "/trade", { method: "POST", headers: authHeaders(), body: JSON.stringify(body) })
       const d = await r.json()
-      if (d.success) {
-        showResp(el, true, `Trade created: <strong>${d.trade.id}</strong> · Status: ${d.trade.status}`)
-        loadTrades()
-      } else {
-        showResp(el, false, d.error || "Unknown error")
-      }
-    } catch (e) {
-      showResp(el, false, `Error: ${e.message}`)
-    }
+      if (d.success) { showResp(el, true, "Trade created: " + d.trade.id); loadTrades() }
+      else showResp(el, false, d.error || "Unknown error")
+    } catch (e) { showResp(el, false, e.message) }
   })
 
-  // ── Settle ────────────────────────────────────────────────────────────────
-  document.getElementById("btnSettle").addEventListener("click", async () => {
-    const el = document.getElementById("settleResp")
-    const body = {
-      amount:   document.getElementById("settleAmount").value,
-      currency: document.getElementById("settleCurrency").value,
-    }
-    if (!body.amount) return showResp(el, false, "Amount is required.")
-    showResp(el, true, "Submitting transaction…")
-    try {
-      const r = await fetch(API + "/settle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-      const d = await r.json()
-      if (d.success) {
-        showResp(el, true, `Transaction confirmed!<br>Hash: <code>${d.hash}</code><br><a href="${d.explorerUrl}" target="_blank">View on Explorer →</a>`)
-      } else {
-        showResp(el, false, d.error || "Transaction failed")
-      }
-    } catch (e) {
-      showResp(el, false, `Error: ${e.message}`)
-    }
-  })
+  // ── XUMM modal ────────────────────────────────────────────────────────────
+  function openXummModal(qr_png, deep_link, uuid, onSigned) {
+    document.getElementById("xummQR").src         = qr_png
+    document.getElementById("xummDeepLink").href  = deep_link
+    document.getElementById("xummStatus").textContent = "Waiting for signature…"
+    document.getElementById("xummModal").classList.add("open")
 
-  // ── Load trades ───────────────────────────────────────────────────────────
-  function text(str) {
-    const el = document.createElement("span")
-    el.textContent = str
-    return el.textContent  // safe escaped string
+    let attempts = 0
+    xummPollTimer = setInterval(async () => {
+      attempts++
+      if (attempts > 120) { clearInterval(xummPollTimer); closeXummModal("Timed out — please try again."); return }
+      try {
+        const r = await fetch(API + "/xumm/payload/" + uuid, { headers: authHeaders() })
+        const d = await r.json()
+        if (d.cancelled) { clearInterval(xummPollTimer); closeXummModal("Transaction cancelled in Xaman."); return }
+        if (d.signed) {
+          clearInterval(xummPollTimer)
+          document.getElementById("xummStatus").textContent = "Signed! TX: " + d.txid
+          setTimeout(() => { closeXummModal(); onSigned(d) }, 1500)
+        }
+      } catch { /* network blip, keep polling */ }
+    }, 2000)
   }
 
+  function closeXummModal(msg) {
+    clearInterval(xummPollTimer)
+    document.getElementById("xummModal").classList.remove("open")
+    document.getElementById("xummQR").src = ""
+  }
+
+  document.getElementById("btnCloseModal").addEventListener("click", () => closeXummModal())
+
+  // ── Trade list ────────────────────────────────────────────────────────────
   function makeBadge(status) {
-    const allowed = ["active", "reconciled", "settled"]
+    const allowed = ["active", "reconciled", "settled", "tokenised"]
     const span = document.createElement("span")
     span.className = "badge " + (allowed.includes(status) ? status : "active")
     span.textContent = status
     return span
   }
 
+  function makeActionBtn(label, cls, onClick) {
+    const btn = document.createElement("button")
+    btn.textContent = label
+    btn.className = cls
+    btn.style.cssText = "padding:4px 10px;font-size:0.72rem"
+    btn.addEventListener("click", onClick)
+    return btn
+  }
+
   function makeTradeItem(t) {
     const item = document.createElement("div")
     item.className = "trade-item"
 
-    const id   = document.createElement("span")
+    const id = document.createElement("span")
     id.className = "trade-id"
     id.textContent = t.id
 
     const meta = document.createElement("span")
     meta.className = "trade-meta"
-    meta.textContent = `${t.counterpartyName} · $${Number(t.totalValue).toLocaleString()} · Due ${t.dueDate}`
+    meta.textContent = t.counterpartyName + " · $" + Number(t.totalValue).toLocaleString() + " · Due " + t.dueDate
+
+    const actions = document.createElement("div")
+    actions.className = "trade-actions"
+
+    if (t.status === "active") {
+      actions.appendChild(makeActionBtn("Reconcile →", "btn-ghost", () => signReconcile(t)))
+    }
+    if (t.status === "reconciled") {
+      actions.appendChild(makeActionBtn("Settle →", "btn-ghost", () => signSettle(t)))
+    }
+    if (t.reconciliation?.onChain?.explorerUrl) {
+      const a = document.createElement("a")
+      a.href = t.reconciliation.onChain.explorerUrl
+      a.target = "_blank"
+      a.textContent = "Recon ↗"
+      a.style.cssText = "font-size:0.72rem;color:var(--link)"
+      actions.appendChild(a)
+    }
+    if (t.settlement?.onChain?.explorerUrl) {
+      const a = document.createElement("a")
+      a.href = t.settlement.onChain.explorerUrl
+      a.target = "_blank"
+      a.textContent = "Settle ↗"
+      a.style.cssText = "font-size:0.72rem;color:var(--link)"
+      actions.appendChild(a)
+    }
 
     item.appendChild(id)
     item.appendChild(meta)
     item.appendChild(makeBadge(t.status))
+    item.appendChild(actions)
     return item
   }
 
   async function loadTrades() {
     const list = document.getElementById("tradeList")
     try {
-      const r = await fetch(API + "/trades")
+      const r = await fetch(API + "/trades", { headers: authHeaders() })
       const d = await r.json()
       list.innerHTML = ""
       if (!d.trades || d.trades.length === 0) {
@@ -404,8 +478,35 @@
     }
   }
 
+  // ── XUMM signing actions ──────────────────────────────────────────────────
+  async function signReconcile(trade) {
+    const share = prompt("Enter your share of the cost (USD):")
+    if (!share) return
+    try {
+      const r = await fetch(API + "/trade/" + trade.id + "/sign-reconcile", {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ yourShare: parseFloat(share) })
+      })
+      const d = await r.json()
+      if (!d.success) return alert("Error: " + (d.error || "Unknown"))
+      openXummModal(d.qr_png, d.deep_link, d.uuid, () => loadTrades())
+    } catch (e) { alert("Error: " + e.message) }
+  }
+
+  async function signSettle(trade) {
+    try {
+      const r = await fetch(API + "/trade/" + trade.id + "/sign-settle", {
+        method: "POST", headers: authHeaders(), body: JSON.stringify({})
+      })
+      const d = await r.json()
+      if (!d.success) return alert("Error: " + (d.error || "Unknown"))
+      openXummModal(d.qr_png, d.deep_link, d.uuid, () => loadTrades())
+    } catch (e) { alert("Error: " + e.message) }
+  }
+
   document.getElementById("btnRefresh").addEventListener("click", loadTrades)
-  loadTrades()
+
+  boot()
 </script>
 
 </body>
