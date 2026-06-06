@@ -1,22 +1,27 @@
 'use strict'
 
 require('dotenv').config()
-const express   = require('express')
-const xrpl      = require('xrpl')
-const crypto    = require('crypto')
-const path      = require('path')
-const cors      = require('cors')
-const rateLimit = require('express-rate-limit')
-const multer    = require('multer')
-const db        = require('./db')
+const express    = require('express')
+const xrpl       = require('xrpl')
+const crypto     = require('crypto')
+const path       = require('path')
+const cors       = require('cors')
+const helmet     = require('helmet')
+const rateLimit  = require('express-rate-limit')
+const multer     = require('multer')
+const db         = require('./db')
 const { hashPassword, verifyPassword, signToken, requireAuth } = require('./auth')
-const xumm      = require('./xumm')
-const email     = require('./email')
+const xumm       = require('./xumm')
+const email      = require('./email')
+const compliance = require('./compliance')
 
 const upload    = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
 const app  = express()
 const port = process.env.PORT || 3000
+
+// ─── Security headers ─────────────────────────────────────────────────────────
+app.use(helmet({ contentSecurityPolicy: false })) // CSP disabled — inline scripts in index.html
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || `http://localhost:${port}`).split(',')
@@ -32,11 +37,33 @@ const payLimiter   = rateLimit({ windowMs: 60_000,       max: 10,  standardHeade
 app.use(express.json())
 app.use(express.static(path.join(__dirname, '../public')))
 
-// ─── XRPL Client ─────────────────────────────────────────────────────────────
-const client = new xrpl.Client(process.env.XRPL_NODE || 'wss://s.altnet.rippletest.net:51233')
+// ─── XRPL Client with failover ────────────────────────────────────────────────
+const XRPL_NETWORK = process.env.XRPL_NETWORK || 'testnet'
+const XRPL_NODES   = (process.env.XRPL_NODES || process.env.XRPL_NODE || 'wss://s.altnet.rippletest.net:51233')
+  .split(',').map(s => s.trim()).filter(Boolean)
+const explorerBase = XRPL_NETWORK === 'mainnet'
+  ? 'https://livenet.xrpl.org/transactions'
+  : 'https://testnet.xrpl.org/transactions'
+
+let _client      = null
+let _clientIndex = 0
+
 async function getClient() {
-  if (!client.isConnected()) await client.connect()
-  return client
+  if (_client && _client.isConnected()) return _client
+  for (let i = 0; i < XRPL_NODES.length; i++) {
+    const url = XRPL_NODES[(_clientIndex + i) % XRPL_NODES.length]
+    try {
+      const c = new xrpl.Client(url)
+      await c.connect()
+      _clientIndex = (_clientIndex + i) % XRPL_NODES.length
+      _client      = c
+      console.log(`XRPL connected: ${url}`)
+      return c
+    } catch (err) {
+      console.warn(`XRPL node ${url} unavailable: ${err.message}`)
+    }
+  }
+  throw new Error('All XRPL nodes unreachable')
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -134,7 +161,7 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
       if (record.trade_id) {
         const trade = db.getTradeById(record.trade_id)
         if (trade) {
-          const explorerUrl = `https://testnet.xrpl.org/transactions/${status.txid}`
+          const explorerUrl = `${explorerBase}/${status.txid}`
           const now = new Date().toISOString()
 
           if (record.action === 'reconcile') {
@@ -364,17 +391,29 @@ app.post('/trade/:id/sign-tokenise', requireAuth, async (req, res) => {
     platform:      'TradeFlow Ledger',
   })
 
-  const txjson = {
-    TransactionType: 'NFTokenMint',
-    Account:         user.xrplAddress,
-    NFTokenTaxon:    0,
-    Flags:           8, // tfTransferable
-    URI:             Buffer.from(metadata, 'utf8').toString('hex').toUpperCase(),
-    Memos: [{ Memo: {
-      MemoType: Buffer.from('TradeFlow/InvoiceTokenization', 'utf8').toString('hex').toUpperCase(),
-      MemoData: Buffer.from(trade.id,                       'utf8').toString('hex').toUpperCase(),
-    }}],
-  }
+  const ENABLE_MPT = process.env.ENABLE_MPT === 'true'
+  const txjson = ENABLE_MPT
+    // MPTokenIssuanceCreate — requires MPToken amendment on-ledger (mainnet path)
+    ? {
+        TransactionType:  'MPTokenIssuanceCreate',
+        Account:          user.xrplAddress,
+        AssetScale:       2,
+        MaximumAmount:    String(Math.round(trade.totalValue * 100)), // cents
+        Flags:            64, // tfMPTCanTransfer
+        Metadata:         Buffer.from(metadata, 'utf8').toString('hex').toUpperCase(),
+      }
+    // NFTokenMint — current testnet path
+    : {
+        TransactionType: 'NFTokenMint',
+        Account:         user.xrplAddress,
+        NFTokenTaxon:    0,
+        Flags:           8, // tfTransferable
+        URI:             Buffer.from(metadata, 'utf8').toString('hex').toUpperCase(),
+        Memos: [{ Memo: {
+          MemoType: Buffer.from('TradeFlow/InvoiceTokenization', 'utf8').toString('hex').toUpperCase(),
+          MemoData: Buffer.from(trade.id,                       'utf8').toString('hex').toUpperCase(),
+        }}],
+      }
 
   try {
     const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
@@ -393,6 +432,12 @@ app.post('/trade/:id/sign-settle', requireAuth, async (req, res) => {
   const user = db.getUserById(req.userId)
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
+
+  // Travel Rule / AML compliance check
+  const amountUsd = trade.reconciliation?.yourShare ?? trade.totalValue
+  const travelCheck = compliance.checkTravelRule(amountUsd, user.kycStatus)
+  if (travelCheck.blocked) return res.status(403).json({ error: travelCheck.reason })
+  compliance.amlLog({ userId: req.userId, tradeId: trade.id, amountUsd, action: 'sign-settle' })
 
   const RLUSD_ISSUER = process.env.RLUSD_ISSUER || 'rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV'
   const amount = trade.reconciliation ? String(trade.reconciliation.yourShare) : String(trade.totalValue)
@@ -611,7 +656,19 @@ app.post('/settle', payLimiter, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', network: 'XRPL Testnet', timestamp: new Date().toISOString() })
+  res.json({
+    status:  'ok',
+    network: XRPL_NETWORK,
+    xrpl: {
+      connected: _client ? _client.isConnected() : false,
+      node:      XRPL_NODES[_clientIndex] || null,
+      nodeCount: XRPL_NODES.length,
+    },
+    db:          'ok',
+    mptEnabled:  process.env.ENABLE_MPT === 'true',
+    uptime:      Math.floor(process.uptime()),
+    timestamp:   new Date().toISOString(),
+  })
 })
 
 // ─── Core payment helper (server wallet, not user wallet) ─────────────────────
@@ -638,7 +695,7 @@ async function sendPayment(seed, destination, amount, currency = 'XRP', tradeId 
   const response = await c.submitAndWait(signed.tx_blob)
   return {
     hash: response.result.hash, status: response.result.meta.TransactionResult,
-    explorerUrl: `https://testnet.xrpl.org/transactions/${response.result.hash}`,
+    explorerUrl: `${explorerBase}/${response.result.hash}`,
   }
 }
 
@@ -653,7 +710,7 @@ async function notifyCounterparty(trade, status, explorerUrl) {
 // ─── Graceful shutdown ────────────────────────────────────────────────────────
 async function shutdown() {
   console.log('\nShutting down…')
-  if (client.isConnected()) await client.disconnect()
+  if (_client && _client.isConnected()) await _client.disconnect()
   db.close()
   process.exit(0)
 }
