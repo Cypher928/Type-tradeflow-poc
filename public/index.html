@@ -110,6 +110,35 @@
     .escrow-info dt { color:var(--muted); display:inline; }
     .escrow-info dd { display:inline; margin:0 14px 0 4px; }
 
+    /* ── Detail tabs ── */
+    .detail-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:14px; }
+    .detail-tab { background:none; border:none; color:var(--muted); padding:6px 12px; font-size:.78rem; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; border-radius:0; }
+    .detail-tab.active { color:var(--text); border-bottom-color:var(--accent); font-weight:600; }
+    .detail-panel { display:none; }
+    .detail-panel.active { display:block; }
+
+    /* ── Document list ── */
+    .doc-item { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:.78rem; }
+    .doc-item:last-child { border-bottom:none; }
+    .doc-hash { font-family:monospace; color:var(--muted); font-size:.7rem; word-break:break-all; flex:1; }
+
+    /* ── Audit log ── */
+    .audit-row { display:flex; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:.76rem; }
+    .audit-row:last-child { border-bottom:none; }
+    .audit-time { color:var(--muted); white-space:nowrap; flex-shrink:0; }
+    .audit-action { flex:1; }
+    .audit-tx a { color:var(--link); font-size:.7rem; }
+
+    /* ── Invite banner ── */
+    .invite-banner { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:16px; text-align:center; }
+    .invite-banner h3 { margin-bottom:8px; }
+    .invite-banner p { color:var(--muted); font-size:.82rem; margin-bottom:14px; }
+
+    /* ── KYC badge ── */
+    .kyc-badge { font-size:.68rem; padding:1px 6px; border-radius:10px; }
+    .kyc-pending  { background:#2d2a1f; color:var(--warn); }
+    .kyc-verified { background:#1a3a1a; color:var(--ok); }
+
     /* ── XUMM Modal ── */
     .overlay { position:fixed; inset:0; background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center; z-index:100; }
     .overlay.open { display:flex; }
@@ -151,6 +180,11 @@
   <div class="hero">
     <h2>Trade Finance on the XRP Ledger</h2>
     <p>Sign in to create trades, reconcile, and settle with RLUSD.</p>
+  </div>
+  <!-- Invite acceptance banner — shown when ?invite= is in the URL -->
+  <div class="invite-banner" id="inviteBanner" style="display:none">
+    <h3>You've been invited to a trade</h3>
+    <p id="inviteBannerText">Sign in or create an account to view and accept this trade.</p>
   </div>
   <div class="card" style="max-width:400px;margin:0 auto;width:100%">
     <div class="tabs">
@@ -305,13 +339,44 @@
     return addr ? addr.slice(0, 6) + "…" + addr.slice(-4) : ""
   }
 
+  // ── Invite acceptance ─────────────────────────────────────────────────────
+  const inviteToken = new URLSearchParams(window.location.search).get("invite")
+
+  async function checkInvite() {
+    if (!inviteToken) return
+    try {
+      const r = await fetch(API + "/invite/" + inviteToken)
+      const d = await r.json()
+      if (d.success) {
+        $("inviteBanner").style.display = "block"
+        $("inviteBannerText").textContent = `You've been invited to join trade "${d.invite.tradeName}" ($${Number(d.invite.tradeValue || 0).toLocaleString()} USD). Sign in or create an account to accept.`
+        if (d.invite.inviteeEmail) $("loginEmail").value = d.invite.inviteeEmail
+      }
+    } catch {}
+  }
+
+  async function acceptPendingInvite() {
+    if (!inviteToken) return
+    try {
+      const r = await fetch(API + "/invite/" + inviteToken + "/accept", { method: "POST", headers: authH() })
+      const d = await r.json()
+      if (d.success) {
+        window.history.replaceState({}, "", "/")
+        loadTrades()
+      }
+    } catch {}
+  }
+
   async function boot() {
+    checkInvite()
     if (!token) { setLoggedOut(); return }
     try {
       const r = await fetch(API + "/auth/me", { headers: authH() })
       const d = await r.json()
-      if (d.success) setLoggedIn(d.user, token)
-      else setLoggedOut()
+      if (d.success) {
+        setLoggedIn(d.user, token)
+        acceptPendingInvite()
+      } else setLoggedOut()
     } catch { setLoggedOut() }
   }
 
@@ -323,7 +388,8 @@
     try {
       const r = await fetch(API + "/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       const d = await r.json()
-      d.success ? setLoggedIn(d.user, d.token) : resp(el, false, d.error || "Login failed")
+      if (d.success) { setLoggedIn(d.user, d.token); acceptPendingInvite() }
+      else resp(el, false, d.error || "Login failed")
     } catch (e) { resp(el, false, e.message) }
   })
 
@@ -334,7 +400,8 @@
     try {
       const r = await fetch(API + "/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       const d = await r.json()
-      d.success ? setLoggedIn(d.user, d.token) : resp(el, false, d.error || "Registration failed")
+      if (d.success) { setLoggedIn(d.user, d.token); acceptPendingInvite() }
+      else resp(el, false, d.error || "Registration failed")
     } catch (e) { resp(el, false, e.message) }
   })
 
@@ -474,7 +541,28 @@
     const div = document.createElement("div")
     div.className = "trade-detail"
 
-    // ── Timeline ──
+    // ── Tab bar ──
+    const tabBar = document.createElement("div"); tabBar.className = "detail-tabs"
+    const panels = {}
+    for (const [id, label] of [["overview","Overview"],["docs","Documents"],["audit","Audit Trail"],["invite","Invite"]]) {
+      const btn = document.createElement("button"); btn.className = "detail-tab" + (id === "overview" ? " active" : "")
+      btn.textContent = label
+      const panel = document.createElement("div"); panel.className = "detail-panel" + (id === "overview" ? " active" : "")
+      panels[id] = panel
+      btn.addEventListener("click", () => {
+        tabBar.querySelectorAll(".detail-tab").forEach(b => b.classList.remove("active"))
+        div.querySelectorAll(".detail-panel").forEach(p => p.classList.remove("active"))
+        btn.classList.add("active"); panel.classList.add("active")
+        if (id === "docs")  loadDocs(t.id, panel)
+        if (id === "audit") loadAudit(t.id, panel)
+      })
+      tabBar.appendChild(btn)
+    }
+    div.appendChild(tabBar)
+    Object.values(panels).forEach(p => div.appendChild(p))
+
+    // ── Overview panel ──
+    const overviewPanel = panels["overview"]
     const tl = document.createElement("div"); tl.className = "timeline"
 
     const done  = "✅"
@@ -512,7 +600,7 @@
       tl.appendChild(tlRow(rank >= 4 ? done : pend, "Tokenise as RWA", rank >= 4 ? "Complete" : "—", null))
     }
 
-    div.appendChild(tl)
+    overviewPanel.appendChild(tl)
 
     // ── Action panel ──
     const ap = document.createElement("div"); ap.className = "action-panel"
@@ -598,8 +686,120 @@
       ap.innerHTML = "<h4 style='color:var(--ok)'>✅ Complete — all 5 steps done</h4>"
     }
 
-    div.appendChild(ap)
+    overviewPanel.appendChild(ap)
+
+    // ── Documents panel ──
+    const docsPanel = panels["docs"]
+    docsPanel.innerHTML = `<h4 style="font-size:.8rem;color:var(--muted);margin-bottom:10px">ATTACHED DOCUMENTS</h4>`
+    const docList = document.createElement("div"); docList.id = "docList_" + t.id
+    docsPanel.appendChild(docList)
+    const docForm = document.createElement("div"); docForm.style.cssText = "border-top:1px solid var(--border);padding-top:12px;margin-top:8px"
+    docForm.innerHTML = `<label style="display:block;margin-bottom:6px;font-size:.78rem;color:var(--muted)">Attach a document (file or hash)</label>`
+    const fileInput = document.createElement("input"); fileInput.type = "file"; fileInput.style.cssText = "width:100%;margin-bottom:8px;font-size:.78rem"
+    const hashInput = document.createElement("input"); hashInput.type = "text"; hashInput.placeholder = "Or paste SHA-256 hash"; hashInput.style.marginBottom = "8px"
+    const fnInput   = document.createElement("input"); fnInput.type = "text"; fnInput.placeholder = "Filename (optional)"; fnInput.style.marginBottom = "8px"
+    const uploadBtn = document.createElement("button"); uploadBtn.textContent = "Attach"; uploadBtn.className = "btn-sm"
+    uploadBtn.addEventListener("click", async () => {
+      if (fileInput.files[0]) {
+        const fd = new FormData(); fd.append("file", fileInput.files[0])
+        const r = await fetch(API + "/trade/" + t.id + "/document", { method: "POST", headers: { Authorization: "Bearer " + token }, body: fd })
+        const d = await r.json()
+        if (d.success) { loadDocs(t.id, docsPanel); fileInput.value = "" }
+        else alert("Error: " + (d.error || "Upload failed"))
+      } else if (hashInput.value.trim()) {
+        const r = await fetch(API + "/trade/" + t.id + "/document", { method: "POST", headers: authH(), body: JSON.stringify({ hash: hashInput.value.trim(), filename: fnInput.value.trim() || null }) })
+        const d = await r.json()
+        if (d.success) { loadDocs(t.id, docsPanel); hashInput.value = ""; fnInput.value = "" }
+        else alert("Error: " + (d.error || "Failed"))
+      } else alert("Select a file or paste a hash.")
+    })
+    docForm.appendChild(fileInput); docForm.appendChild(hashInput); docForm.appendChild(fnInput); docForm.appendChild(uploadBtn)
+    docsPanel.appendChild(docForm)
+
+    // ── Audit Trail panel ──
+    const auditPanel = panels["audit"]
+    auditPanel.innerHTML = `<h4 style="font-size:.8rem;color:var(--muted);margin-bottom:10px">AUDIT TRAIL</h4>`
+    const auditList = document.createElement("div"); auditList.id = "auditList_" + t.id
+    auditList.textContent = "Click the Audit Trail tab to load."
+    auditPanel.appendChild(auditList)
+
+    // ── Invite panel ──
+    const invitePanel = panels["invite"]
+    invitePanel.innerHTML = `<h4 style="font-size:.8rem;color:var(--muted);margin-bottom:10px">INVITE COUNTERPARTY</h4>`
+
+    if (t.counterpartyUserId) {
+      const note = document.createElement("p"); note.style.cssText = "font-size:.78rem;color:var(--ok)"
+      note.textContent = "✅ Counterparty has joined this trade."
+      invitePanel.appendChild(note)
+    } else {
+      const emailDiv = document.createElement("div"); emailDiv.style.marginBottom = "10px"
+      const emailLabel = document.createElement("label"); emailLabel.textContent = "Counterparty email (optional — leave blank for link only)"
+      const emailIn = document.createElement("input"); emailIn.type = "email"; emailIn.placeholder = "partner@example.com"
+      emailDiv.appendChild(emailLabel); emailDiv.appendChild(emailIn)
+      const inviteBtn = document.createElement("button"); inviteBtn.textContent = "Generate invite link"
+      const linkBox = document.createElement("div"); linkBox.style.cssText = "margin-top:10px;display:none"
+      const linkInput = document.createElement("input"); linkInput.readOnly = true; linkInput.style.cssText = "font-size:.72rem;font-family:monospace"
+      const copyBtn = document.createElement("button"); copyBtn.textContent = "Copy"; copyBtn.className = "btn-ghost btn-sm"; copyBtn.style.marginTop = "6px"
+      copyBtn.addEventListener("click", () => { navigator.clipboard.writeText(linkInput.value); copyBtn.textContent = "Copied!" })
+      linkBox.appendChild(linkInput); linkBox.appendChild(copyBtn)
+      inviteBtn.addEventListener("click", async () => {
+        const body = emailIn.value.trim() ? { inviteeEmail: emailIn.value.trim() } : {}
+        const r = await fetch(API + "/trade/" + t.id + "/invite", { method: "POST", headers: authH(), body: JSON.stringify(body) })
+        const d = await r.json()
+        if (d.success) { linkInput.value = d.inviteUrl; linkBox.style.display = "block" }
+        else alert("Error: " + (d.error || "Failed"))
+      })
+      invitePanel.appendChild(emailDiv); invitePanel.appendChild(inviteBtn); invitePanel.appendChild(linkBox)
+    }
+
     return div
+  }
+
+  // ── Load documents ────────────────────────────────────────────────────────
+  async function loadDocs(tradeId, panel) {
+    const list = panel.querySelector("#docList_" + tradeId)
+    if (!list) return
+    try {
+      const r = await fetch(API + "/trade/" + tradeId + "/documents", { headers: authH() })
+      const d = await r.json()
+      list.innerHTML = ""
+      if (!d.documents || d.documents.length === 0) {
+        list.innerHTML = `<div style="color:var(--muted);font-size:.78rem;padding:8px 0">No documents attached yet.</div>`
+        return
+      }
+      d.documents.forEach(doc => {
+        const row = document.createElement("div"); row.className = "doc-item"
+        const name = document.createElement("span"); name.textContent = doc.filename || "Unnamed"
+        const hash = document.createElement("span"); hash.className = "doc-hash"; hash.textContent = doc.hash
+        row.appendChild(name); row.appendChild(hash); list.appendChild(row)
+      })
+    } catch {}
+  }
+
+  // ── Load audit trail ──────────────────────────────────────────────────────
+  async function loadAudit(tradeId, panel) {
+    const list = panel.querySelector("#auditList_" + tradeId)
+    if (!list) return
+    try {
+      const r = await fetch(API + "/trade/" + tradeId + "/audit", { headers: authH() })
+      const d = await r.json()
+      list.innerHTML = ""
+      if (!d.log || d.log.length === 0) {
+        list.innerHTML = `<div style="color:var(--muted);font-size:.78rem">No audit events yet.</div>`
+        return
+      }
+      d.log.forEach(entry => {
+        const row = document.createElement("div"); row.className = "audit-row"
+        const time = document.createElement("span"); time.className = "audit-time"; time.textContent = new Date(entry.created_at).toLocaleString()
+        const action = document.createElement("span"); action.className = "audit-action"; action.textContent = entry.action + (entry.detail ? " — " + entry.detail : "")
+        const txCol = document.createElement("span"); txCol.className = "audit-tx"
+        if (entry.txid) {
+          const a = document.createElement("a"); a.href = "https://testnet.xrpl.org/transactions/" + entry.txid; a.target = "_blank"; a.textContent = "TX ↗"
+          txCol.appendChild(a)
+        }
+        row.appendChild(time); row.appendChild(action); row.appendChild(txCol); list.appendChild(row)
+      })
+    } catch {}
   }
 
   function makeTradeCard(t) {

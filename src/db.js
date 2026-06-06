@@ -1,5 +1,6 @@
 'use strict'
 
+const crypto   = require('crypto')
 const Database = require('better-sqlite3')
 const path = require('path')
 const fs   = require('fs')
@@ -19,23 +20,26 @@ db.exec(`
     email         TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     xrpl_address  TEXT,
+    kyc_status    TEXT NOT NULL DEFAULT 'pending',
     created_at    TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS trades (
-    id                   TEXT PRIMARY KEY,
-    user_id              TEXT,
-    counterparty_name    TEXT NOT NULL,
-    counterparty_address TEXT NOT NULL,
-    total_value          REAL NOT NULL,
-    due_date             TEXT NOT NULL,
-    status               TEXT NOT NULL DEFAULT 'active',
-    created_at           TEXT NOT NULL,
-    reconciliation       TEXT,
-    escrow               TEXT,
-    settlement           TEXT,
-    nft                  TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    id                      TEXT PRIMARY KEY,
+    user_id                 TEXT,
+    counterparty_user_id    TEXT,
+    counterparty_name       TEXT NOT NULL,
+    counterparty_address    TEXT NOT NULL,
+    total_value             REAL NOT NULL,
+    due_date                TEXT NOT NULL,
+    status                  TEXT NOT NULL DEFAULT 'active',
+    created_at              TEXT NOT NULL,
+    reconciliation          TEXT,
+    escrow                  TEXT,
+    settlement              TEXT,
+    nft                     TEXT,
+    FOREIGN KEY (user_id)              REFERENCES users(id),
+    FOREIGN KEY (counterparty_user_id) REFERENCES users(id)
   );
 
   CREATE TABLE IF NOT EXISTS xumm_payloads (
@@ -47,12 +51,42 @@ db.exec(`
     txid       TEXT,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS invites (
+    token         TEXT PRIMARY KEY,
+    trade_id      TEXT NOT NULL,
+    invitee_email TEXT,
+    invited_by    TEXT NOT NULL,
+    accepted_at   TEXT,
+    created_at    TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS documents (
+    id         TEXT PRIMARY KEY,
+    trade_id   TEXT NOT NULL,
+    user_id    TEXT NOT NULL,
+    filename   TEXT,
+    hash       TEXT NOT NULL,
+    size_bytes INTEGER,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id         TEXT PRIMARY KEY,
+    trade_id   TEXT NOT NULL,
+    user_id    TEXT,
+    action     TEXT NOT NULL,
+    detail     TEXT,
+    txid       TEXT,
+    created_at TEXT NOT NULL
+  );
 `)
 
 // Migrate existing DBs — ignore errors if columns already exist
-for (const col of ['escrow TEXT', 'nft TEXT']) {
+for (const col of ['escrow TEXT', 'nft TEXT', 'counterparty_user_id TEXT']) {
   try { db.exec(`ALTER TABLE trades ADD COLUMN ${col}`) } catch {}
 }
+try { db.exec('ALTER TABLE users ADD COLUMN kyc_status TEXT NOT NULL DEFAULT \'pending\'') } catch {}
 
 // ─── User statements ──────────────────────────────────────────────────────────
 const userStmts = {
@@ -105,7 +139,7 @@ function rowToTrade(row) {
 
 function rowToUser(row) {
   if (!row) return null
-  return { id: row.id, email: row.email, xrplAddress: row.xrpl_address, createdAt: row.created_at }
+  return { id: row.id, email: row.email, xrplAddress: row.xrpl_address, kycStatus: row.kyc_status || 'pending', createdAt: row.created_at }
 }
 
 module.exports = {
@@ -171,6 +205,59 @@ module.exports = {
 
   resolveXummPayload(uuid, txid) {
     xummStmts.resolve.run(txid, uuid)
+  },
+
+  // ── Trades — counterparty access ───────────────────────────────────────────
+  getTradesByUserOrCounterparty(userId) {
+    return db.prepare(`
+      SELECT * FROM trades WHERE user_id = ? OR counterparty_user_id = ? ORDER BY created_at DESC
+    `).all(userId, userId).map(rowToTrade)
+  },
+
+  setCounterparty(tradeId, counterpartyUserId) {
+    db.prepare('UPDATE trades SET counterparty_user_id = ? WHERE id = ?').run(counterpartyUserId, tradeId)
+  },
+
+  // ── Invites ────────────────────────────────────────────────────────────────
+  createInvite({ token, tradeId, inviteeEmail, invitedBy }) {
+    db.prepare('INSERT INTO invites (token, trade_id, invitee_email, invited_by, created_at) VALUES (?,?,?,?,?)')
+      .run(token, tradeId, inviteeEmail || null, invitedBy, new Date().toISOString())
+    return this.getInvite(token)
+  },
+
+  getInvite(token) {
+    return db.prepare('SELECT * FROM invites WHERE token = ?').get(token) || null
+  },
+
+  acceptInvite(token) {
+    db.prepare('UPDATE invites SET accepted_at = ? WHERE token = ?').run(new Date().toISOString(), token)
+  },
+
+  // ── Documents ──────────────────────────────────────────────────────────────
+  addDocument({ id, tradeId, userId, filename, hash, sizeBytes }) {
+    db.prepare('INSERT INTO documents (id, trade_id, user_id, filename, hash, size_bytes, created_at) VALUES (?,?,?,?,?,?,?)')
+      .run(id, tradeId, userId, filename || null, hash, sizeBytes || 0, new Date().toISOString())
+    return db.prepare('SELECT * FROM documents WHERE id = ?').get(id)
+  },
+
+  getDocuments(tradeId) {
+    return db.prepare('SELECT * FROM documents WHERE trade_id = ? ORDER BY created_at DESC').all(tradeId)
+  },
+
+  // ── Audit log ──────────────────────────────────────────────────────────────
+  logAudit({ tradeId, userId, action, detail, txid }) {
+    const id = crypto.randomUUID()
+    db.prepare('INSERT INTO audit_log (id, trade_id, user_id, action, detail, txid, created_at) VALUES (?,?,?,?,?,?,?)')
+      .run(id, tradeId, userId || null, action, detail || null, txid || null, new Date().toISOString())
+  },
+
+  getAuditLog(tradeId) {
+    return db.prepare('SELECT * FROM audit_log WHERE trade_id = ? ORDER BY created_at ASC').all(tradeId)
+  },
+
+  // ── KYC ───────────────────────────────────────────────────────────────────
+  setKycStatus(userId, status) {
+    db.prepare('UPDATE users SET kyc_status = ? WHERE id = ?').run(status, userId)
   },
 
   close() {

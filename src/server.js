@@ -7,9 +7,13 @@ const crypto    = require('crypto')
 const path      = require('path')
 const cors      = require('cors')
 const rateLimit = require('express-rate-limit')
+const multer    = require('multer')
 const db        = require('./db')
 const { hashPassword, verifyPassword, signToken, requireAuth } = require('./auth')
 const xumm      = require('./xumm')
+const email     = require('./email')
+
+const upload    = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
 const app  = express()
 const port = process.env.PORT || 3000
@@ -141,8 +145,11 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
               settlement: trade.settlement,
               nft:        trade.nft,
             })
+            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'reconciled', txid: status.txid })
+            notifyCounterparty(trade, 'reconciled', explorerUrl)
 
           } else if (record.action === 'escrow_create') {
+
             // Fetch the TX from XRPL to get the Sequence number needed for EscrowFinish
             let sequence = null
             try {
@@ -158,6 +165,8 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
               settlement: trade.settlement,
               nft:        trade.nft,
             })
+            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'escrowed', txid: status.txid })
+            notifyCounterparty(trade, 'escrowed', explorerUrl)
 
           } else if (record.action === 'escrow_finish') {
             db.updateTrade(trade.id, {
@@ -167,6 +176,8 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
               settlement: { onChain: { hash: status.txid, explorerUrl }, settledAt: now },
               nft:        trade.nft,
             })
+            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'settled (escrow finish)', txid: status.txid })
+            notifyCounterparty(trade, 'settled', explorerUrl)
 
           } else if (record.action === 'settle') {
             db.updateTrade(trade.id, {
@@ -176,6 +187,8 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
               settlement: { onChain: { hash: status.txid, explorerUrl }, settledAt: now },
               nft:        trade.nft,
             })
+            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'settled (direct)', txid: status.txid })
+            notifyCounterparty(trade, 'settled', explorerUrl)
 
           } else if (record.action === 'tokenise') {
             db.updateTrade(trade.id, {
@@ -185,6 +198,8 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
               settlement: trade.settlement,
               nft:        { txid: status.txid, explorerUrl, tokenisedAt: now },
             })
+            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'tokenised', txid: status.txid })
+            notifyCounterparty(trade, 'tokenised', explorerUrl)
           }
         }
       }
@@ -228,7 +243,7 @@ app.post('/trade', requireAuth, tradeLimiter, (req, res) => {
 })
 
 app.get('/trades', requireAuth, (req, res) => {
-  const trades = db.getTradesByUser(req.userId)
+  const trades = db.getTradesByUserOrCounterparty(req.userId)
   res.json({ success: true, trades })
 })
 
@@ -403,6 +418,125 @@ app.post('/trade/:id/sign-settle', requireAuth, async (req, res) => {
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PHASE 3: INVITES · DOCUMENTS · AUDIT TRAIL · KYC
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// POST /trade/:id/invite — generate invite link and optionally email the counterparty
+app.post('/trade/:id/invite', requireAuth, async (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId) return res.status(403).json({ error: 'Only the trade creator can invite a counterparty' })
+
+  const { inviteeEmail } = req.body
+  const token    = crypto.randomBytes(20).toString('hex')
+  const appUrl   = process.env.APP_URL || `http://localhost:${port}`
+  const inviteUrl = `${appUrl}/?invite=${token}`
+
+  db.createInvite({ token, tradeId: trade.id, inviteeEmail: inviteeEmail || null, invitedBy: req.userId })
+  db.logAudit({ tradeId: trade.id, userId: req.userId, action: 'invite_created', detail: inviteeEmail || 'link only' })
+
+  if (inviteeEmail) {
+    const inviter = db.getUserById(req.userId)
+    await email.tradeInvite({
+      to:           inviteeEmail,
+      inviterEmail: inviter.email,
+      tradeName:    `${trade.id} — ${trade.counterpartyName}`,
+      tradeValue:   trade.totalValue,
+      inviteUrl,
+    })
+  }
+
+  res.json({ success: true, inviteUrl, token })
+})
+
+// GET /invite/:token — look up invite details (public, used by frontend)
+app.get('/invite/:token', (req, res) => {
+  const invite = db.getInvite(req.params.token)
+  if (!invite) return res.status(404).json({ error: 'Invite not found or expired' })
+  if (invite.accepted_at) return res.status(410).json({ error: 'Invite already accepted' })
+
+  const trade = db.getTradeById(invite.trade_id)
+  res.json({
+    success: true,
+    invite: {
+      token:        invite.token,
+      inviteeEmail: invite.invitee_email,
+      tradeId:      invite.trade_id,
+      tradeName:    trade ? `${trade.id} — ${trade.counterpartyName}` : invite.trade_id,
+      tradeValue:   trade?.totalValue,
+    }
+  })
+})
+
+// POST /invite/:token/accept — accept invite (must be logged in)
+app.post('/invite/:token/accept', requireAuth, (req, res) => {
+  const invite = db.getInvite(req.params.token)
+  if (!invite) return res.status(404).json({ error: 'Invite not found' })
+  if (invite.accepted_at) return res.status(410).json({ error: 'Invite already accepted' })
+
+  db.acceptInvite(invite.token)
+  db.setCounterparty(invite.trade_id, req.userId)
+  db.logAudit({ tradeId: invite.trade_id, userId: req.userId, action: 'counterparty_joined' })
+
+  const trade = db.getTradeById(invite.trade_id)
+  res.json({ success: true, trade })
+})
+
+// POST /trade/:id/document — upload a document; store its SHA-256 hash
+app.post('/trade/:id/document', requireAuth, upload.single('file'), (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+
+  let hash, filename, sizeBytes
+
+  if (req.file) {
+    // File was uploaded — compute hash server-side
+    hash      = crypto.createHash('sha256').update(req.file.buffer).digest('hex')
+    filename  = req.file.originalname
+    sizeBytes = req.file.size
+  } else if (req.body.hash) {
+    // Client provided a pre-computed hash
+    hash      = req.body.hash
+    filename  = req.body.filename || null
+    sizeBytes = req.body.sizeBytes ? parseInt(req.body.sizeBytes) : null
+  } else {
+    return res.status(400).json({ error: 'Provide a file upload or a hash' })
+  }
+
+  const doc = db.addDocument({ id: crypto.randomUUID(), tradeId: trade.id, userId: req.userId, filename, hash, sizeBytes })
+  db.logAudit({ tradeId: trade.id, userId: req.userId, action: 'document_added', detail: `${filename || 'untitled'} — SHA-256: ${hash}` })
+
+  res.status(201).json({ success: true, document: doc })
+})
+
+// GET /trade/:id/documents — list documents attached to a trade
+app.get('/trade/:id/documents', requireAuth, (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  res.json({ success: true, documents: db.getDocuments(req.params.id) })
+})
+
+// GET /trade/:id/audit — full audit log for a trade
+app.get('/trade/:id/audit', requireAuth, (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  res.json({ success: true, log: db.getAuditLog(req.params.id) })
+})
+
+// GET /kyc/status — current user's KYC status
+app.get('/kyc/status', requireAuth, (req, res) => {
+  const user = db.getUserById(req.userId)
+  if (!user) return res.status(404).json({ error: 'User not found' })
+  res.json({
+    success:   true,
+    kycStatus: user.kycStatus,
+    message:   user.kycStatus === 'pending'
+      ? 'KYC verification is pending. Full KYC/KYB onboarding (Sumsub) will be required before mainnet.'
+      : `KYC status: ${user.kycStatus}`
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TRUST LINE ROUTES  (auth required)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -506,6 +640,14 @@ async function sendPayment(seed, destination, amount, currency = 'XRP', tradeId 
     hash: response.result.hash, status: response.result.meta.TransactionResult,
     explorerUrl: `https://testnet.xrpl.org/transactions/${response.result.hash}`,
   }
+}
+
+// ─── Email counterparty on trade status change ────────────────────────────────
+async function notifyCounterparty(trade, status, explorerUrl) {
+  if (!trade.counterpartyUserId) return
+  const cp = db.getUserById(trade.counterpartyUserId)
+  if (!cp?.email) return
+  email.tradeStatusChanged({ to: cp.email, tradeId: trade.id, status, explorerUrl }).catch(() => {})
 }
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────
