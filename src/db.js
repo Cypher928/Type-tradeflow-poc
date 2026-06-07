@@ -102,7 +102,7 @@ db.exec(`
 `)
 
 // Migrate existing DBs — ignore errors if columns already exist
-for (const col of ['escrow TEXT', 'nft TEXT', 'counterparty_user_id TEXT']) {
+for (const col of ['escrow TEXT', 'nft TEXT', 'counterparty_user_id TEXT', 'updated_at TEXT']) {
   try { db.exec(`ALTER TABLE trades ADD COLUMN ${col}`) } catch {}
 }
 try { db.exec('ALTER TABLE users ADD COLUMN kyc_status TEXT NOT NULL DEFAULT \'pending\'') } catch {}
@@ -126,7 +126,7 @@ const tradeStmts = {
   findByUser: db.prepare('SELECT * FROM trades WHERE user_id = ? ORDER BY created_at DESC'),
   update:     db.prepare(`
     UPDATE trades
-    SET status = @status, reconciliation = @reconciliation, escrow = @escrow, settlement = @settlement, nft = @nft
+    SET status = @status, reconciliation = @reconciliation, escrow = @escrow, settlement = @settlement, nft = @nft, updated_at = @updatedAt
     WHERE id = @id
   `),
 }
@@ -141,18 +141,20 @@ const xummStmts = {
 function rowToTrade(row) {
   if (!row) return null
   return {
-    id:                  row.id,
-    userId:              row.user_id,
-    counterpartyName:    row.counterparty_name,
-    counterpartyAddress: row.counterparty_address,
-    totalValue:          row.total_value,
-    dueDate:             row.due_date,
-    status:              row.status,
-    createdAt:           row.created_at,
-    reconciliation:      row.reconciliation ? JSON.parse(row.reconciliation) : null,
-    escrow:              row.escrow         ? JSON.parse(row.escrow)         : null,
-    settlement:          row.settlement     ? JSON.parse(row.settlement)     : null,
-    nft:                 row.nft            ? JSON.parse(row.nft)            : null,
+    id:                   row.id,
+    userId:               row.user_id,
+    counterpartyUserId:   row.counterparty_user_id || null,
+    counterpartyName:     row.counterparty_name,
+    counterpartyAddress:  row.counterparty_address,
+    totalValue:           row.total_value,
+    dueDate:              row.due_date,
+    status:               row.status,
+    createdAt:            row.created_at,
+    updatedAt:            row.updated_at || null,
+    reconciliation:       row.reconciliation ? JSON.parse(row.reconciliation) : null,
+    escrow:               row.escrow         ? JSON.parse(row.escrow)         : null,
+    settlement:           row.settlement     ? JSON.parse(row.settlement)     : null,
+    nft:                  row.nft            ? JSON.parse(row.nft)            : null,
   }
 }
 
@@ -205,6 +207,7 @@ module.exports = {
     tradeStmts.update.run({
       id,
       status,
+      updatedAt:      new Date().toISOString(),
       reconciliation: reconciliation ? JSON.stringify(reconciliation) : null,
       escrow:         escrow         ? JSON.stringify(escrow)         : null,
       settlement:     settlement     ? JSON.stringify(settlement)     : null,

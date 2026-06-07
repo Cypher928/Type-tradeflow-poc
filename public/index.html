@@ -64,6 +64,8 @@
     .btn-sm { padding:4px 10px; font-size:.72rem; }
     .btn-warn { background:#5a3e00; color:var(--warn); }
     .btn-warn:hover:not(:disabled) { background:#7a5400; }
+    .btn-demo { background:#1a2f1a; color:#4caf50; border:1px dashed #4caf50; font-size:.72rem; padding:4px 10px; margin-top:8px; }
+    .btn-demo:hover:not(:disabled) { background:#243824; }
     .btn-danger { background:#3d0f0f; color:var(--err); }
     .btn-danger:hover:not(:disabled) { background:#5c1616; }
 
@@ -725,7 +727,7 @@ function buildDetail(t) {
   const statusRank = { active:0, reconciled:1, escrowed:2, settled:3, tokenised:4 }
   const rank = statusRank[t.status] ?? 0
 
-  tl.appendChild(tlRow("✅", "Trade created", fmtDate(t.createdAt), null))
+  tl.appendChild(tlRow("✅", "Trade created", fmtDate(t.createdAt) + (t.creatorEmail ? " by " + t.creatorEmail : ""), null))
 
   if (rank >= 1 && t.reconciliation?.onChain) {
     tl.appendChild(tlRow("✅", "Reconciled on-chain", fmtDate(t.reconciliation.recordedAt), t.reconciliation.onChain.explorerUrl))
@@ -756,6 +758,24 @@ function buildDetail(t) {
   // ── Action panel ──
   const ap = document.createElement("div"); ap.className = "action-panel"
 
+  // helper: demo advance button (no XUMM needed)
+  function demoAdvanceBtn(tradeId, label) {
+    const b = document.createElement("button")
+    b.textContent = "Demo: " + label; b.className = "btn-demo"
+    b.title = "Simulate signing without Xaman — for testing only"
+    b.addEventListener("click", async () => {
+      setLoading(b, true)
+      try {
+        const r = await fetch(API + "/trade/" + tradeId + "/advance-status", { method: "POST", headers: authH() })
+        const d = await r.json()
+        if (d.success) { toast("Status advanced to: " + d.trade.status, "ok"); loadTrades() }
+        else toast("Error: " + (d.error || "Unknown"), "err")
+      } catch (e) { toast("Error: " + e.message, "err") }
+      finally { setLoading(b, false, "Demo: " + label) }
+    })
+    return b
+  }
+
   if (t.status === "active") {
     ap.innerHTML = "<h4>Next step</h4>"
     const row = document.createElement("div"); row.className = "action-row"
@@ -770,6 +790,7 @@ function buildDetail(t) {
       xummAction("/trade/" + t.id + "/sign-reconcile", { yourShare: share }, btn, "Reconcile via Xaman")
     })
     row.appendChild(shareDiv); row.appendChild(btn); ap.appendChild(row)
+    ap.appendChild(demoAdvanceBtn(t.id, "Reconcile"))
 
   } else if (t.status === "reconciled") {
     ap.innerHTML = "<h4>Next step — choose one</h4>"
@@ -800,6 +821,7 @@ function buildDetail(t) {
       xummAction("/trade/" + t.id + "/sign-settle", {}, settleBtn, "Direct Settle (RLUSD)")
     })
     settleRow.appendChild(settleBtn); ap.appendChild(settleRow)
+    ap.appendChild(demoAdvanceBtn(t.id, "Escrow (skip to escrowed)"))
 
   } else if (t.status === "escrowed") {
     ap.innerHTML = "<h4>Escrow active</h4>"
@@ -817,6 +839,7 @@ function buildDetail(t) {
     const finishBtn = document.createElement("button"); finishBtn.textContent = "Finish Escrow (release funds)"
     finishBtn.addEventListener("click", () => xummAction("/trade/" + t.id + "/sign-finish-escrow", {}, finishBtn, "Finish Escrow"))
     finishRow.appendChild(finishBtn); ap.appendChild(finishRow)
+    ap.appendChild(demoAdvanceBtn(t.id, "Settle (skip to settled)"))
 
   } else if (t.status === "settled") {
     ap.innerHTML = "<h4>Next step</h4>"
@@ -824,6 +847,7 @@ function buildDetail(t) {
     const btn = document.createElement("button"); btn.textContent = "Tokenise Invoice as NFT/RWA"
     btn.addEventListener("click", () => xummAction("/trade/" + t.id + "/sign-tokenise", {}, btn, "Tokenise Invoice"))
     row.appendChild(btn); ap.appendChild(row)
+    ap.appendChild(demoAdvanceBtn(t.id, "Tokenise"))
 
   } else if (t.status === "tokenised") {
     ap.innerHTML = "<h4 style='color:var(--ok)'>✅ Complete — all 5 steps done</h4>"
@@ -965,7 +989,7 @@ function makeTradeCard(t) {
   const summary = document.createElement("div"); summary.className = "trade-summary"
   const idEl = document.createElement("span"); idEl.className = "trade-id"; idEl.textContent = t.id
   const meta = document.createElement("span"); meta.className = "trade-meta"
-  meta.textContent = t.counterpartyName + " · $" + Number(t.totalValue).toLocaleString() + " · Due " + t.dueDate
+  meta.textContent = t.counterpartyName + " · $" + Number(t.totalValue).toLocaleString() + " · Due " + t.dueDate + (t.createdAt ? " · " + fmtDate(t.createdAt) : "")
   const chev = document.createElement("span"); chev.className = "chevron"; chev.textContent = "▾"
   summary.appendChild(idEl); summary.appendChild(meta); summary.appendChild(badge(t.status)); summary.appendChild(chev)
   summary.addEventListener("click", () => card.hasAttribute("open") ? card.removeAttribute("open") : card.setAttribute("open", ""))

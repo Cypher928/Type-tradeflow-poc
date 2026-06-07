@@ -330,6 +330,7 @@ app.post('/trade', requireAuth, tradeLimiter, async (req, res) => {
       createdAt: new Date().toISOString(),
     })
 
+    db.logAudit({ tradeId: id, userId: req.userId, action: 'trade_created', detail: `counterparty=${counterpartyAddress.trim()} value=${numericValue} due=${dueDate}` })
     console.log(`[trade] created: ${id} counterparty=${counterpartyAddress.trim()} value=${numericValue}`)
     res.status(201).json({ success: true, trade })
   } catch (err) {
@@ -338,13 +339,70 @@ app.post('/trade', requireAuth, tradeLimiter, async (req, res) => {
   }
 })
 
-// N-6: paginated trade list — supports ?limit and ?offset query params
+// GET /trade/:id — single trade with creator email
+app.get('/trade/:id', requireAuth, (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
+  const creator = db.getUserById(trade.userId)
+  res.json({ success: true, trade: { ...trade, creatorEmail: creator?.email || null } })
+})
+
+// GET /trades — paginated trade list with creator emails
 app.get('/trades', requireAuth, (req, res) => {
   const limit  = Math.min(parseInt(req.query.limit)  || 50, 100)
   const offset = Math.max(parseInt(req.query.offset) || 0,  0)
   const trades = db.getTradesByUserOrCounterpartyPaged(req.userId, limit, offset)
   const total  = db.countTradesByUserOrCounterparty(req.userId)
-  res.json({ success: true, trades, total, limit, offset })
+
+  const userIds = [...new Set(trades.map(t => t.userId).filter(Boolean))]
+  const userMap = {}
+  for (const uid of userIds) {
+    const u = db.getUserById(uid)
+    if (u) userMap[uid] = u.email
+  }
+  const enriched = trades.map(t => ({ ...t, creatorEmail: userMap[t.userId] || null }))
+
+  res.json({ success: true, trades: enriched, total, limit, offset })
+})
+
+// POST /trade/:id/advance-status — demo/test-only manual status advancement (no XUMM required)
+const STATUS_SEQUENCE = ['active', 'reconciled', 'escrowed', 'settled', 'tokenised']
+app.post('/trade/:id/advance-status', requireAuth, (req, res) => {
+  const trade = db.getTradeById(req.params.id)
+  if (!trade) return res.status(404).json({ error: 'Trade not found' })
+  if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
+    return res.status(403).json({ error: 'Forbidden' })
+
+  const currentIdx = STATUS_SEQUENCE.indexOf(trade.status)
+  if (currentIdx === -1 || currentIdx === STATUS_SEQUENCE.length - 1)
+    return res.status(400).json({ error: `Trade is already at final status: ${trade.status}` })
+
+  const nextStatus = STATUS_SEQUENCE[currentIdx + 1]
+  const now = new Date().toISOString()
+
+  const patch = {
+    status:        nextStatus,
+    reconciliation: trade.reconciliation,
+    escrow:         trade.escrow,
+    settlement:     trade.settlement,
+    nft:            trade.nft,
+  }
+
+  if (nextStatus === 'reconciled' && !patch.reconciliation)
+    patch.reconciliation = { simulated: true, recordedAt: now }
+  if (nextStatus === 'escrowed' && !patch.escrow)
+    patch.escrow = { simulated: true, createdAt: now }
+  if (nextStatus === 'settled' && !patch.settlement)
+    patch.settlement = { simulated: true, settledAt: now }
+  if (nextStatus === 'tokenised' && !patch.nft)
+    patch.nft = { simulated: true, tokenisedAt: now }
+
+  const updated = db.updateTrade(trade.id, patch)
+  db.logAudit({ tradeId: trade.id, userId: req.userId, action: `simulated_${nextStatus}`, detail: 'manual advance (demo mode)' })
+  console.log(`[trade] manual advance: ${trade.id} ${trade.status} → ${nextStatus}`)
+  res.json({ success: true, trade: updated })
 })
 
 // POST /trade/:id/sign-reconcile — build reconciliation TX and return XUMM payload
