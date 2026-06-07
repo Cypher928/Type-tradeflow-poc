@@ -307,6 +307,7 @@
       <div><label>Due Date</label><input id="dueDate" type="date" /></div>
     </div>
     <button id="btnCreateTrade">Create Trade</button>
+    <p style="margin:8px 0 0;font-size:12px;color:var(--muted)">No wallet needed to create a trade. A linked XRPL wallet is only required when signing transactions (reconcile, escrow, settle).</p>
     <div class="resp" id="createResp"></div>
   </div>
 
@@ -592,8 +593,14 @@ $("btnCreateTrade").addEventListener("click", async () => {
     totalValue:          $("tradeValue").value,
     dueDate:             $("dueDate").value,
   }
-  if (!body.counterpartyName || !body.counterpartyAddress || !body.totalValue || !body.dueDate)
-    return resp(el, false, "All fields are required.")
+  if (!body.counterpartyName)
+    return resp(el, false, "Counterparty name is required.")
+  if (!body.counterpartyAddress)
+    return resp(el, false, "Counterparty XRPL address is required.")
+  if (!body.totalValue || Number(body.totalValue) <= 0)
+    return resp(el, false, "Total value must be a positive number.")
+  if (!body.dueDate)
+    return resp(el, false, "Due date is required.")
   setLoading(btn, true)
   try {
     const r = await fetch(API + "/trade", { method: "POST", headers: authH(), body: JSON.stringify(body) })

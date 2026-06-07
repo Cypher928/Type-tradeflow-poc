@@ -161,8 +161,10 @@ app.get('/auth/me', requireAuth, (req, res) => {
 // POST /auth/wallet — link an XRPL address to the logged-in account
 app.post('/auth/wallet', requireAuth, (req, res) => {
   const { xrplAddress } = req.body
-  if (!xrplAddress || !xrpl.isValidAddress(xrplAddress))
-    return res.status(400).json({ error: 'valid xrplAddress is required' })
+  if (!xrplAddress)
+    return res.status(400).json({ error: 'xrplAddress is required', field: 'xrplAddress' })
+  if (!xrpl.isValidAddress(xrplAddress))
+    return res.status(400).json({ error: 'Not a valid XRPL address — must start with "r" (e.g. rXXX…)', field: 'xrplAddress' })
 
   const user = db.setWalletAddress(req.userId, xrplAddress)
   res.json({ success: true, user })
@@ -297,31 +299,43 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
 // TRADE ROUTES  (auth required)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-app.post('/trade', requireAuth, tradeLimiter, (req, res) => {
-  const { counterpartyName, counterpartyAddress, totalValue, dueDate } = req.body
+app.post('/trade', requireAuth, tradeLimiter, async (req, res) => {
+  try {
+    const { counterpartyName, counterpartyAddress, totalValue, dueDate } = req.body
 
-  if (!counterpartyName || !counterpartyAddress || !totalValue || !dueDate)
-    return res.status(400).json({ error: 'counterpartyName, counterpartyAddress, totalValue, dueDate required' })
-  if (!xrpl.isValidAddress(counterpartyAddress))
-    return res.status(400).json({ error: 'counterpartyAddress is not a valid XRPL address' })
+    if (!counterpartyName)
+      return res.status(400).json({ error: 'Counterparty name is required', field: 'counterpartyName' })
+    if (!counterpartyAddress)
+      return res.status(400).json({ error: 'Counterparty XRPL address is required', field: 'counterpartyAddress' })
+    if (!totalValue)
+      return res.status(400).json({ error: 'Total value is required', field: 'totalValue' })
+    if (!dueDate)
+      return res.status(400).json({ error: 'Due date is required', field: 'dueDate' })
 
-  const numericValue = parseFloat(totalValue)
-  if (isNaN(numericValue) || numericValue <= 0)
-    return res.status(400).json({ error: 'totalValue must be a positive number' })
+    if (!xrpl.isValidAddress(counterpartyAddress.trim()))
+      return res.status(400).json({ error: 'Counterparty XRPL address is not valid — must start with "r" and be 25–35 characters', field: 'counterpartyAddress' })
 
-  const id    = 'TF-' + crypto.randomBytes(4).toString('hex').toUpperCase()
-  const trade = db.createTrade({
-    id,
-    userId:              req.userId,
-    counterpartyName:    counterpartyName.trim(),
-    counterpartyAddress: counterpartyAddress.trim(),
-    totalValue:          numericValue,
-    dueDate,
-    createdAt: new Date().toISOString(),
-  })
+    const numericValue = parseFloat(totalValue)
+    if (isNaN(numericValue) || numericValue <= 0)
+      return res.status(400).json({ error: 'Total value must be a positive number', field: 'totalValue' })
 
-  console.log(`Trade created: ${id}`)
-  res.status(201).json({ success: true, trade })
+    const id    = 'TF-' + crypto.randomBytes(4).toString('hex').toUpperCase()
+    const trade = db.createTrade({
+      id,
+      userId:              req.userId,
+      counterpartyName:    counterpartyName.trim(),
+      counterpartyAddress: counterpartyAddress.trim(),
+      totalValue:          numericValue,
+      dueDate,
+      createdAt: new Date().toISOString(),
+    })
+
+    console.log(`[trade] created: ${id} counterparty=${counterpartyAddress.trim()} value=${numericValue}`)
+    res.status(201).json({ success: true, trade })
+  } catch (err) {
+    console.error('[trade] create error:', err.message, err.stack)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // N-6: paginated trade list — supports ?limit and ?offset query params
