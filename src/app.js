@@ -23,9 +23,19 @@ const port = process.env.PORT || 3000
 app.use(helmet({ contentSecurityPolicy: false })) // CSP disabled — inline scripts in index.html
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || `http://localhost:${port}`).split(',')
+// When ALLOWED_ORIGINS is not set, allow all origins (suitable for Vercel PoC
+// deployments where the exact URL is not known at build time). Set
+// ALLOWED_ORIGINS=https://your-domain.com in production to restrict access.
+const _rawOrigins = process.env.ALLOWED_ORIGINS
+const allowedOrigins = _rawOrigins ? _rawOrigins.split(',').map(s => s.trim()) : []
 app.use(cors({
-  origin: (origin, cb) => (!origin || allowedOrigins.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS')))
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true)               // non-browser / server-to-server
+    if (allowedOrigins.length === 0) return cb(null, true)  // no allowlist — open
+    if (allowedOrigins.includes(origin)) return cb(null, true)
+    console.warn(`[CORS] blocked origin: ${origin}`)
+    cb(new Error(`CORS: origin ${origin} not in ALLOWED_ORIGINS`))
+  }
 }))
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
@@ -71,21 +81,45 @@ async function getClient() {
 
 // POST /auth/register
 app.post('/auth/register', authLimiter, async (req, res) => {
-  const { email: emailAddr, password } = req.body
-  if (!emailAddr || !password)
-    return res.status(400).json({ error: 'email and password are required' })
-  if (password.length < 8)
-    return res.status(400).json({ error: 'password must be at least 8 characters' })
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddr))
-    return res.status(400).json({ error: 'invalid email address' })
+  try {
+    const { email: emailAddr, password } = req.body
+    console.log(`[register] attempt — email=${emailAddr ? emailAddr.slice(0, 3) + '***' : 'MISSING'} password_len=${password ? password.length : 'MISSING'}`)
 
-  if (db.getUserByEmail(emailAddr.toLowerCase()))
-    return res.status(409).json({ error: 'an account with that email already exists' })
+    if (!emailAddr || !password) {
+      console.log('[register] FAIL: missing email or password')
+      return res.status(400).json({ error: 'email and password are required', field: !emailAddr ? 'email' : 'password' })
+    }
+    if (password.length < 8) {
+      console.log(`[register] FAIL: password too short (${password.length} chars)`)
+      return res.status(400).json({ error: 'password must be at least 8 characters', field: 'password', rule: 'minLength:8' })
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddr)) {
+      console.log(`[register] FAIL: invalid email format — ${emailAddr}`)
+      return res.status(400).json({ error: 'invalid email address', field: 'email', rule: 'emailFormat' })
+    }
 
-  const passwordHash = await hashPassword(password)
-  const user = db.createUser({ id: crypto.randomUUID(), email: emailAddr.toLowerCase(), passwordHash })
-  const token = signToken(user.id)
-  res.status(201).json({ success: true, token, user })
+    console.log('[register] validation passed — checking duplicate')
+    if (db.getUserByEmail(emailAddr.toLowerCase())) {
+      console.log('[register] FAIL: duplicate email')
+      return res.status(409).json({ error: 'an account with that email already exists', field: 'email', rule: 'unique' })
+    }
+
+    console.log('[register] hashing password')
+    const passwordHash = await hashPassword(password)
+
+    console.log('[register] creating user in DB')
+    const userId = crypto.randomUUID()
+    const user = db.createUser({ id: userId, email: emailAddr.toLowerCase(), passwordHash })
+
+    console.log(`[register] signing token for userId=${userId}`)
+    const token = signToken(user.id)
+
+    console.log('[register] SUCCESS')
+    res.status(201).json({ success: true, token, user })
+  } catch (err) {
+    console.error('[register] UNHANDLED ERROR:', err.message, err.stack)
+    res.status(500).json({ error: err.message, step: 'register' })
+  }
 })
 
 // POST /auth/login
@@ -781,6 +815,15 @@ async function notifyCounterparty(trade, status, explorerUrl) {
   if (!cp?.email) return
   email.tradeStatusChanged({ to: cp.email, tradeId: trade.id, status, explorerUrl }).catch(() => {})
 }
+
+// ─── Global Express error handler ─────────────────────────────────────────────
+// Catches errors passed via next(err) from middleware (e.g. CORS, body-parser).
+// Without this, Express returns an HTML 500 page which cannot be parsed as JSON.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error(`[express-error] ${req.method} ${req.path} —`, err.message)
+  res.status(err.status || 500).json({ error: err.message })
+})
 
 // ─── Expose XRPL disconnect for graceful shutdown ─────────────────────────────
 app.shutdown = async function () {
