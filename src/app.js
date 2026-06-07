@@ -313,7 +313,7 @@ app.post('/trade', requireAuth, tradeLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Due date is required', field: 'dueDate' })
 
     if (!xrpl.isValidAddress(counterpartyAddress.trim()))
-      return res.status(400).json({ error: 'Counterparty XRPL address is not valid — must start with "r" and be 25–35 characters', field: 'counterpartyAddress' })
+      return res.status(400).json({ error: 'Counterparty address is not a valid XRPL address — must start with "r" and be 25–35 characters', field: 'counterpartyAddress' })
 
     const numericValue = parseFloat(totalValue)
     if (isNaN(numericValue) || numericValue <= 0)
