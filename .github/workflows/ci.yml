@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          # package-lock.json is intentionally gitignored; omit cache: npm
+          # which requires a lock file for its cache key
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+        env:
+          JWT_SECRET: ci-test-secret-do-not-use-in-production
+          XRPL_NODES: wss://s.altnet.rippletest.net:51233
+
+  build:
+    name: Docker build
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: tradeflow:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Uncomment and configure when a registry + deployment target are set up
+  # deploy:
+  #   name: Deploy to staging
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main'
+  #   environment: staging
+  #   steps:
+  #     - name: Deploy
+  #       run: echo "Wire up your deploy step here (Fly.io, Railway, ECS, etc.)"

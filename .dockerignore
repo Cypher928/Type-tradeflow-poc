@@ -1,0 +1,15 @@
+node_modules/
+data/
+.env
+.env.local
+.env.*.local
+*.test.js
+tests/
+scripts/
+contracts/
+docs/
+.git/
+.gitignore
+package-lock.json
+*.png
+*.md

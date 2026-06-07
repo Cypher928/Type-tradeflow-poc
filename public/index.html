@@ -3,376 +3,1028 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TradeFlow Ledger — Demo</title>
+  <meta name="theme-color" content="#238636" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TradeFlow" />
+  <meta name="description" content="Trade Finance on the XRP Ledger — RLUSD settlements and RWA tokenisation" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>TradeFlow Ledger</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --border: #30363d;
-      --accent: #238636;
-      --accent-hover: #2ea043;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --success: #3fb950;
-      --warning: #d29922;
-      --error: #f85149;
-      --link: #58a6ff;
+      --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --border:#30363d;
+      --accent:#238636; --accent-h:#2ea043; --text:#e6edf3; --muted:#8b949e;
+      --ok:#3fb950; --warn:#d29922; --err:#f85149; --link:#58a6ff; --purple:#c084fc;
     }
+    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    header { border-bottom:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; gap:12px; position:sticky; top:0; background:var(--bg); z-index:50; }
+    header h1 { font-size:1.05rem; font-weight:600; flex:1; }
+    .chip { font-size:.72rem; padding:2px 8px; border-radius:12px; font-weight:600; }
+    .chip-green { background:var(--accent); color:#fff; }
+    .header-user { font-size:.8rem; color:var(--muted); display:flex; align-items:center; gap:10px; }
+    .header-user strong { color:var(--text); }
+
+    /* ── Layout ─────────────────────────────────────────────────────────────── */
+    .main { max-width:920px; margin:32px auto; padding:0 20px; display:grid; gap:20px; }
+    .hero { text-align:center; padding:28px 0 4px; }
+    .hero h2 { font-size:1.7rem; font-weight:700; margin-bottom:8px; }
+    .hero p { color:var(--muted); font-size:.93rem; }
+
+    /* ── Pipeline steps ─────────────────────────────────────────────────────── */
+    .pipeline { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
+    .step { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 10px; text-align:center; }
+    .step .num { font-size:.68rem; color:var(--muted); margin-bottom:3px; }
+    .step .label { font-size:.82rem; font-weight:600; }
+    .step .tag { font-size:.68rem; color:var(--muted); margin-top:3px; }
+
+    /* ── Cards ──────────────────────────────────────────────────────────────── */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:22px; }
+    .card h3 { font-size:.95rem; font-weight:600; margin-bottom:14px; }
+
+    /* ── Tabs ───────────────────────────────────────────────────────────────── */
+    .tabs { display:flex; gap:2px; margin-bottom:18px; border-bottom:1px solid var(--border); }
+    .tab { background:none; border:none; color:var(--muted); padding:8px 14px; font-size:.875rem; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; border-radius:0; }
+    .tab.active { color:var(--text); border-bottom-color:var(--accent); font-weight:600; }
+
+    /* ── Forms ──────────────────────────────────────────────────────────────── */
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    label { display:block; font-size:.78rem; color:var(--muted); margin-bottom:4px; }
+    input,select { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:8px 10px; font-size:.875rem; }
+    input:focus,select:focus { outline:none; border-color:var(--link); }
+
+    /* ── Buttons ────────────────────────────────────────────────────────────── */
+    button { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:.875rem; font-weight:600; cursor:pointer; transition:background .15s; }
+    button:hover:not(:disabled) { background:var(--accent-h); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--muted); }
+    .btn-ghost:hover:not(:disabled) { background:var(--surface2); color:var(--text); }
+    .btn-sm { padding:4px 10px; font-size:.72rem; }
+    .btn-warn { background:#5a3e00; color:var(--warn); }
+    .btn-warn:hover:not(:disabled) { background:#7a5400; }
+    .btn-demo { background:#1a2f1a; color:#4caf50; border:1px dashed #4caf50; font-size:.72rem; padding:4px 10px; margin-top:8px; }
+    .btn-demo:hover:not(:disabled) { background:#243824; }
+    .btn-danger { background:#3d0f0f; color:var(--err); }
+    .btn-danger:hover:not(:disabled) { background:#5c1616; }
+
+    /* ── Loading spinner on buttons ─────────────────────────────────────────── */
+    button.loading { opacity:.7; cursor:not-allowed; }
+    button.loading::after { content:''; width:12px; height:12px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; display:inline-block; margin-left:8px; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Inline response boxes ──────────────────────────────────────────────── */
+    .resp { margin-top:12px; font-size:.78rem; padding:10px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg); display:none; }
+    .resp.show { display:block; }
+    .resp.ok  { border-color:var(--ok); }
+    .resp.err { border-color:var(--err); }
+    .resp a { color:var(--link); text-decoration:none; }
+
+    /* ── Trade list ─────────────────────────────────────────────────────────── */
+    .trade-list { display:grid; gap:8px; }
+    .trade-card { background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+    .trade-summary { padding:12px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; cursor:pointer; user-select:none; }
+    .trade-summary:hover { background:var(--surface2); }
+    .trade-id { font-family:monospace; font-size:.78rem; color:var(--link); white-space:nowrap; }
+    .trade-meta { font-size:.78rem; color:var(--muted); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .chevron { color:var(--muted); font-size:.85rem; transition:transform .2s; flex-shrink:0; }
+    .trade-card[open] .chevron { transform:rotate(180deg); }
+    .trade-detail { display:none; border-top:1px solid var(--border); padding:16px; background:var(--surface); font-size:.82rem; }
+    .trade-card[open] .trade-detail { display:block; }
+
+    /* ── Status badges ──────────────────────────────────────────────────────── */
+    .badge { font-size:.68rem; padding:2px 8px; border-radius:10px; font-weight:600; white-space:nowrap; }
+    .badge.active     { background:#1f3a5f; color:var(--link); }
+    .badge.reconciled { background:#2d2a1f; color:var(--warn); }
+    .badge.escrowed   { background:#1e2a3a; color:#60a5fa; }
+    .badge.settled    { background:#1a3a1a; color:var(--ok); }
+    .badge.tokenised  { background:#2a1a3a; color:var(--purple); }
+
+    /* ── Timeline ───────────────────────────────────────────────────────────── */
+    .timeline { display:grid; gap:10px; margin-bottom:16px; }
+    .tl-row { display:flex; align-items:flex-start; gap:10px; }
+    .tl-icon { font-size:.9rem; width:20px; text-align:center; flex-shrink:0; margin-top:1px; }
+    .tl-body { flex:1; }
+    .tl-label { font-weight:600; color:var(--text); }
+    .tl-sub { color:var(--muted); font-size:.75rem; margin-top:2px; }
+    .tl-sub a { color:var(--link); text-decoration:none; }
+    .tl-sub a:hover { text-decoration:underline; }
+
+    /* ── Action panels ──────────────────────────────────────────────────────── */
+    .action-panel { border-top:1px solid var(--border); padding-top:14px; }
+    .action-panel h4 { font-size:.82rem; font-weight:600; color:var(--muted); margin-bottom:10px; text-transform:uppercase; letter-spacing:.05em; }
+    .action-row { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+    .action-row > div { flex:1; min-width:100px; }
+    .action-row button { flex-shrink:0; align-self:flex-end; }
+    .escrow-info { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px; margin-bottom:10px; font-size:.78rem; }
+    .escrow-info dt { color:var(--muted); display:inline; }
+    .escrow-info dd { display:inline; margin:0 14px 0 4px; }
+
+    /* ── Detail tabs ────────────────────────────────────────────────────────── */
+    .detail-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .detail-tab { background:none; border:none; color:var(--muted); padding:6px 12px; font-size:.78rem; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; border-radius:0; white-space:nowrap; flex-shrink:0; }
+    .detail-tab.active { color:var(--text); border-bottom-color:var(--accent); font-weight:600; }
+    .detail-panel { display:none; }
+    .detail-panel.active { display:block; }
+
+    /* ── Document list ──────────────────────────────────────────────────────── */
+    .doc-item { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:.78rem; flex-wrap:wrap; }
+    .doc-item:last-child { border-bottom:none; }
+    .doc-hash { font-family:monospace; color:var(--muted); font-size:.7rem; word-break:break-all; flex:1; min-width:0; }
+
+    /* ── Audit log ──────────────────────────────────────────────────────────── */
+    .audit-row { display:flex; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:.76rem; flex-wrap:wrap; }
+    .audit-row:last-child { border-bottom:none; }
+    .audit-time { color:var(--muted); white-space:nowrap; flex-shrink:0; }
+    .audit-action { flex:1; min-width:120px; }
+    .audit-tx a { color:var(--link); font-size:.7rem; }
+
+    /* ── Invite banner ──────────────────────────────────────────────────────── */
+    .invite-banner { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:16px; text-align:center; }
+    .invite-banner h3 { margin-bottom:8px; }
+    .invite-banner p { color:var(--muted); font-size:.82rem; margin-bottom:14px; }
+
+    /* ── KYC badge ──────────────────────────────────────────────────────────── */
+    .kyc-badge { font-size:.68rem; padding:1px 6px; border-radius:10px; }
+    .kyc-pending  { background:#2d2a1f; color:var(--warn); }
+    .kyc-verified { background:#1a3a1a; color:var(--ok); }
+
+    /* ── Xaman modal ────────────────────────────────────────────────────────── */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center; z-index:100; padding:16px; }
+    .overlay.open { display:flex; }
+    .modal { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:26px; width:100%; max-width:320px; text-align:center; }
+    .modal h3 { font-size:.95rem; margin-bottom:6px; }
+    .modal p { font-size:.78rem; color:var(--muted); margin-bottom:14px; }
+    .modal img { width:190px; height:190px; border-radius:8px; margin-bottom:12px; display:block; margin-inline:auto; }
+    .modal .dl-link { font-size:.72rem; color:var(--link); }
+    .modal .sign-status { margin-top:12px; font-size:.78rem; min-height:20px; }
+
+    /* ── Toast notifications ────────────────────────────────────────────────── */
+    .toast-container { position:fixed; top:16px; right:16px; z-index:300; display:flex; flex-direction:column; gap:8px; pointer-events:none; max-width:calc(100vw - 32px); }
+    .toast { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-size:.82rem; pointer-events:all; display:flex; align-items:center; gap:10px; box-shadow:0 4px 16px rgba(0,0,0,.5); animation:slideIn .2s ease; }
+    .toast.ok   { border-color:var(--ok);   }
+    .toast.err  { border-color:var(--err);  }
+    .toast.warn { border-color:var(--warn); }
+    .toast span { flex:1; }
+    .toast-close { cursor:pointer; color:var(--muted); font-size:.9rem; background:none; border:none; padding:0; flex-shrink:0; }
+    @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+    @keyframes fadeOut { to { opacity:0; transform:translateX(20px); } }
+
+    /* ── Confirm dialog ─────────────────────────────────────────────────────── */
+    .confirm-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); display:none; align-items:center; justify-content:center; z-index:200; padding:16px; }
+    .confirm-overlay.open { display:flex; }
+    .confirm-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:24px; max-width:380px; width:100%; }
+    .confirm-box p { font-size:.9rem; line-height:1.55; margin-bottom:20px; }
+    .confirm-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+    /* ── Health panel ───────────────────────────────────────────────────────── */
+    .health-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; margin-top:12px; font-size:.78rem; }
+    .health-cell { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px; }
+    .health-cell .hk { color:var(--muted); margin-bottom:3px; font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; }
+    .health-cell .hv { font-weight:600; }
+    .health-cell .hv.ok { color:var(--ok); }
+    .health-cell .hv.err { color:var(--err); }
+
+    /* ── Misc ───────────────────────────────────────────────────────────────── */
+    .empty { color:var(--muted); font-size:.875rem; text-align:center; padding:28px; }
+    footer { text-align:center; padding:36px 20px 20px; color:var(--muted); font-size:.72rem; }
+    footer a { color:var(--link); text-decoration:none; }
+
+    /* ── Responsive ─────────────────────────────────────────────────────────── */
+    @media (max-width:600px) {
+      header { padding:12px 16px; }
+      header h1 { font-size:.95rem; }
+      .header-user > span[id="headerWallet"] { display:none; }
+      .main { margin:12px auto; padding:0 12px; gap:12px; }
+      .hero { padding:16px 0 0; }
+      .hero h2 { font-size:1.3rem; }
+      .form-row { grid-template-columns:1fr; }
+      .pipeline { grid-template-columns:repeat(3,1fr); }
+      .step .tag { display:none; }
+      .card { padding:16px; }
+      .action-row { flex-direction:column; }
+      .action-row > div { width:100%; }
+      .action-row button { width:100%; }
+      .trade-summary { padding:10px 12px; gap:6px; }
+      .trade-meta { font-size:.72rem; }
+      .detail-tab { padding:5px 8px; font-size:.72rem; }
+      .modal img { width:155px; height:155px; }
+      .toast-container { top:auto; bottom:16px; right:8px; left:8px; max-width:100%; }
     }
-
-    header {
-      border-bottom: 1px solid var(--border);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    header h1 { font-size: 1.1rem; font-weight: 600; }
-    header span { font-size: 0.75rem; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 12px; }
-
-    .main {
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 0 24px;
-      display: grid;
-      gap: 24px;
-    }
-
-    .hero {
-      text-align: center;
-      padding: 32px 0 8px;
-    }
-    .hero h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
-    .hero p { color: var(--muted); font-size: 0.95rem; }
-
-    .pipeline {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
-    }
-
-    .step {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 12px;
-      text-align: center;
-    }
-    .step .num { font-size: 0.7rem; color: var(--muted); margin-bottom: 4px; }
-    .step .label { font-size: 0.85rem; font-weight: 600; }
-    .step .tag { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 24px;
-    }
-
-    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
-
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-
-    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
-
-    input, select {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      padding: 8px 10px;
-      font-size: 0.875rem;
-    }
-    input:focus, select:focus { outline: none; border-color: var(--link); }
-
-    button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 9px 18px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    button:hover { background: var(--accent-hover); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .response {
-      margin-top: 14px;
-      font-size: 0.8rem;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      display: none;
-    }
-    .response.visible { display: block; }
-    .response.ok { border-color: var(--success); }
-    .response.err { border-color: var(--error); }
-
-    .response a { color: var(--link); text-decoration: none; }
-    .response a:hover { text-decoration: underline; }
-
-    .trade-list { display: grid; gap: 10px; }
-
-    .trade-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .trade-id { font-family: monospace; font-size: 0.8rem; color: var(--link); }
-    .trade-meta { font-size: 0.8rem; color: var(--muted); }
-    .badge {
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-weight: 600;
-    }
-    .badge.active    { background: #1f3a5f; color: #58a6ff; }
-    .badge.reconciled{ background: #2d2a1f; color: #d29922; }
-    .badge.settled   { background: #1a3a1a; color: #3fb950; }
-
-    .empty { color: var(--muted); font-size: 0.875rem; text-align: center; padding: 24px; }
-
-    footer {
-      text-align: center;
-      padding: 40px 24px 24px;
-      color: var(--muted);
-      font-size: 0.75rem;
-    }
-    footer a { color: var(--link); text-decoration: none; }
   </style>
 </head>
 <body>
 
+<!-- ═══ TOAST CONTAINER ══════════════════════════════════════════════════════ -->
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+<!-- ═══ CONFIRM DIALOG ═══════════════════════════════════════════════════════ -->
+<div class="confirm-overlay" id="confirmOverlay" role="dialog" aria-modal="true">
+  <div class="confirm-box">
+    <p id="confirmMsg"></p>
+    <div class="confirm-actions">
+      <button class="btn-ghost" id="confirmCancel">Cancel</button>
+      <button class="btn-warn" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <header>
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
   <h1>TradeFlow Ledger</h1>
-  <span>Testnet</span>
+  <span class="chip chip-green" id="networkChip">Testnet</span>
+  <div class="header-user" id="headerUser" style="display:none">
+    <strong id="headerEmail"></strong>
+    <span id="headerWallet" style="font-size:.72rem;color:var(--muted);font-family:monospace"></span>
+    <button class="btn-ghost btn-sm" id="btnLogout">Sign out</button>
+  </div>
 </header>
 
-<div class="main">
+<!-- ═══ AUTH GATE ════════════════════════════════════════════════════════════ -->
+<div class="main" id="authGate" style="display:none">
+  <div class="hero">
+    <h2>Trade Finance on the XRP Ledger</h2>
+    <p>Sign in to create trades, reconcile, and settle with RLUSD.</p>
+  </div>
+  <div class="invite-banner" id="inviteBanner" style="display:none">
+    <h3>You've been invited to a trade</h3>
+    <p id="inviteBannerText">Sign in or create an account to view and accept this trade.</p>
+  </div>
+  <div class="card" style="max-width:400px;margin:0 auto;width:100%">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Sign in</button>
+      <button class="tab" onclick="switchTab('register')">Create account</button>
+    </div>
+    <div id="loginForm">
+      <div style="margin-bottom:10px"><label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com" autocomplete="email" /></div>
+      <div style="margin-bottom:14px"><label>Password</label><input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" /></div>
+      <button id="btnLogin" style="width:100%">Sign in</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div style="margin-bottom:10px"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com" autocomplete="email" /></div>
+      <div style="margin-bottom:14px"><label>Password <span style="color:var(--muted)">(min 8 chars)</span></label><input id="regPassword" type="password" placeholder="••••••••" autocomplete="new-password" /></div>
+      <button id="btnRegister" style="width:100%">Create account</button>
+    </div>
+    <div class="resp" id="authResp"></div>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ══════════════════════════════════════════════════════════════ -->
+<div class="main" id="appContent" style="display:none">
 
   <div class="hero">
     <h2>Trade Finance on the XRP Ledger</h2>
-    <p>Create trades, record reconciliation on-chain, and settle with RLUSD — all on XRPL Testnet.</p>
+    <p>Create trades · Reconcile on-chain · Escrow · Settle with RLUSD · Tokenise as RWA</p>
   </div>
 
-  <!-- Pipeline overview -->
   <div class="pipeline">
-    <div class="step">
-      <div class="num">01</div>
-      <div class="label">Create Trade</div>
-      <div class="tag">REST API</div>
+    <div class="step"><div class="num">01</div><div class="label">Create</div><div class="tag">REST API</div></div>
+    <div class="step"><div class="num">02</div><div class="label">Reconcile</div><div class="tag">XRPL Memo</div></div>
+    <div class="step"><div class="num">03</div><div class="label">Escrow</div><div class="tag">EscrowCreate</div></div>
+    <div class="step"><div class="num">04</div><div class="label">Settle</div><div class="tag">RLUSD</div></div>
+    <div class="step"><div class="num">05</div><div class="label">Tokenise</div><div class="tag">NFT / RWA</div></div>
+  </div>
+
+  <!-- Wallet link -->
+  <div class="card" id="walletCard">
+    <h3>Your XRPL Wallet</h3>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Link your address so TradeFlow can build transactions for you to sign in the <strong>Xaman</strong> app. Your keys never leave your device.</p>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px"><label>XRPL Address</label><input id="walletAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false" /></div>
+      <button id="btnLinkWallet">Link wallet</button>
     </div>
-    <div class="step">
-      <div class="num">02</div>
-      <div class="label">Reconcile</div>
-      <div class="tag">XRPL Memo</div>
-    </div>
-    <div class="step">
-      <div class="num">03</div>
-      <div class="label">Escrow</div>
-      <div class="tag">EscrowCreate</div>
-    </div>
-    <div class="step">
-      <div class="num">04</div>
-      <div class="label">Settle</div>
-      <div class="tag">RLUSD Payment</div>
-    </div>
-    <div class="step">
-      <div class="num">05</div>
-      <div class="label">Tokenise</div>
-      <div class="tag">MPT / RWA</div>
-    </div>
+    <div class="resp" id="walletResp"></div>
   </div>
 
   <!-- Create trade -->
   <div class="card">
     <h3>Create New Trade</h3>
     <div class="form-row">
-      <div>
-        <label for="cpName">Counterparty Name</label>
-        <input id="cpName" type="text" placeholder="Acme Imports Ltd" />
-      </div>
-      <div>
-        <label for="cpAddr">Counterparty XRPL Address</label>
-        <input id="cpAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" />
-      </div>
+      <div><label>Counterparty Name</label><input id="cpName" type="text" placeholder="Acme Imports Ltd" /></div>
+      <div><label>Counterparty XRPL Address</label><input id="cpAddr" type="text" placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false" /></div>
     </div>
     <div class="form-row">
-      <div>
-        <label for="tradeValue">Total Value (USD)</label>
-        <input id="tradeValue" type="number" placeholder="5000" min="1" />
-      </div>
-      <div>
-        <label for="dueDate">Due Date</label>
-        <input id="dueDate" type="date" />
-      </div>
+      <div><label>Total Value (USD)</label><input id="tradeValue" type="number" placeholder="5000" min="1" /></div>
+      <div><label>Due Date</label><input id="dueDate" type="date" /></div>
     </div>
     <button id="btnCreateTrade">Create Trade</button>
-    <div class="response" id="createResp"></div>
+    <p style="margin:8px 0 0;font-size:12px;color:var(--muted)">No wallet needed to create a trade. A linked XRPL wallet is only required when signing transactions (reconcile, escrow, settle).</p>
+    <div class="resp" id="createResp"></div>
   </div>
 
-  <!-- Settle (quick) -->
+  <!-- Trade list -->
   <div class="card">
-    <h3>Quick Settlement</h3>
-    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;">
-      Send a direct XRP or RLUSD payment from a wallet seed. Use this for testing the
-      <code>/settle</code> endpoint directly.
-    </p>
-    <div class="form-row">
-      <div>
-        <label for="settleAmount">Amount</label>
-        <input id="settleAmount" type="number" placeholder="10" min="0.000001" step="any" />
-      </div>
-      <div>
-        <label for="settleCurrency">Currency</label>
-        <select id="settleCurrency">
-          <option value="XRP">XRP</option>
-          <option value="RLUSD">RLUSD</option>
-        </select>
-      </div>
-    </div>
-    <button id="btnSettle">Send Payment</button>
-    <div class="response" id="settleResp"></div>
-  </div>
-
-  <!-- Active trades -->
-  <div class="card">
-    <h3>Active Trades <button id="btnRefresh" style="float:right;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:0.75rem;padding:4px 10px;">Refresh</button></h3>
-    <div class="trade-list" id="tradeList">
-      <div class="empty">No trades yet. Create one above.</div>
-    </div>
+    <h3 style="display:flex;align-items:center;justify-content:space-between">
+      Your Trades
+      <button class="btn-ghost btn-sm" id="btnRefresh">Refresh</button>
+    </h3>
+    <div class="trade-list" id="tradeList"><div class="empty">No trades yet. Create one above.</div></div>
   </div>
 
   <!-- Health -->
   <div class="card">
     <h3>Node Status</h3>
-    <button id="btnHealth">Check /health</button>
-    <div class="response" id="healthResp"></div>
+    <button id="btnHealth">Check health</button>
+    <div id="healthGrid"></div>
   </div>
 
 </div>
 
+<!-- ═══ XUMM MODAL ════════════════════════════════════════════════════════════ -->
+<div class="overlay" id="xummOverlay" role="dialog" aria-modal="true" aria-label="Sign with Xaman">
+  <div class="modal">
+    <h3>Sign with Xaman</h3>
+    <p>Scan the QR code in your Xaman app. Your keys never leave your device.</p>
+    <img id="xummQR" src="" alt="Xaman QR code" />
+    <div><a class="dl-link" id="xummDeepLink" href="#" target="_blank" rel="noopener">Open in Xaman app →</a></div>
+    <div class="sign-status" id="xummStatus">Waiting for signature…</div>
+    <button class="btn-danger btn-sm" style="margin-top:14px;width:100%" id="btnCloseModal">Cancel</button>
+  </div>
+</div>
+
 <footer>
-  Built on the <a href="https://xrpl.org" target="_blank">XRP Ledger</a> ·
-  <a href="https://testnet.xrpl.org" target="_blank">Testnet Explorer</a> ·
-  <a href="https://github.com/Cypher928/Type-tradeflow-poc" target="_blank">GitHub</a>
+  Built on the <a href="https://xrpl.org" target="_blank" rel="noopener">XRP Ledger</a> ·
+  <a href="https://testnet.xrpl.org" target="_blank" rel="noopener">Testnet Explorer</a> ·
+  <a href="https://github.com/Cypher928/Type-tradeflow-poc" target="_blank" rel="noopener">GitHub</a>
 </footer>
 
 <script>
-  const API = ""  // same origin — server serves this file
+'use strict'
+const API = ""
+let token = localStorage.getItem("tf_token") || null
+let currentUser = null
+let xummPollTimer = null
+let refreshTimer  = null
 
-  function showResp(el, ok, html) {
-    el.innerHTML = html
-    el.className = "response visible " + (ok ? "ok" : "err")
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id)
+
+function authH() {
+  return { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) }
+}
+
+function resp(el, ok, msg) {
+  el.textContent = msg
+  el.className = "resp show " + (ok ? "ok" : "err")
+}
+
+function switchTab(t) {
+  $("loginForm").style.display    = t === "login"    ? "" : "none"
+  $("registerForm").style.display = t === "register" ? "" : "none"
+  document.querySelectorAll(".tab").forEach((b, i) => b.classList.toggle("active", (i === 0) === (t === "login")))
+}
+
+function shorten(addr) {
+  return addr ? addr.slice(0, 6) + "…" + addr.slice(-4) : ""
+}
+
+function fmtDate(iso) {
+  return iso ? new Date(iso).toLocaleDateString() : "—"
+}
+
+// ── Toast notifications ───────────────────────────────────────────────────────
+function toast(msg, type = "ok", duration = 3500) {
+  const c = $("toastContainer")
+  const t = document.createElement("div")
+  t.className = "toast " + type
+  t.setAttribute("role", "alert")
+  const txt = document.createElement("span"); txt.textContent = msg
+  const close = document.createElement("button"); close.className = "toast-close"; close.textContent = "✕"; close.setAttribute("aria-label", "Dismiss")
+  close.addEventListener("click", () => t.remove())
+  t.appendChild(txt); t.appendChild(close)
+  c.appendChild(t)
+  setTimeout(() => {
+    t.style.animation = "fadeOut .2s ease forwards"
+    setTimeout(() => t.remove(), 200)
+  }, duration)
+}
+
+// ── Confirm dialog ────────────────────────────────────────────────────────────
+function confirmDialog(msg) {
+  return new Promise(resolve => {
+    $("confirmMsg").textContent = msg
+    $("confirmOverlay").classList.add("open")
+    const ok     = $("confirmOk")
+    const cancel = $("confirmCancel")
+    const cleanup = val => {
+      $("confirmOverlay").classList.remove("open")
+      ok.replaceWith(ok.cloneNode(true))
+      cancel.replaceWith(cancel.cloneNode(true))
+      resolve(val)
+    }
+    $("confirmOk").addEventListener("click",     () => cleanup(true),  { once: true })
+    $("confirmCancel").addEventListener("click",  () => cleanup(false), { once: true })
+  })
+}
+
+// ── Button loading state ──────────────────────────────────────────────────────
+function setLoading(btn, on, label) {
+  btn.disabled = on
+  btn.classList.toggle("loading", on)
+  if (!on && label) btn.textContent = label
+}
+
+// ── Session ───────────────────────────────────────────────────────────────────
+function setLoggedIn(user, tok) {
+  token = tok; currentUser = user
+  if (tok) localStorage.setItem("tf_token", tok)
+  $("authGate").style.display   = "none"
+  $("appContent").style.display = "grid"
+  $("headerUser").style.display = "flex"
+  $("headerEmail").textContent  = user.email
+  $("headerWallet").textContent = user.xrplAddress ? shorten(user.xrplAddress) : ""
+  if (user.xrplAddress) {
+    $("walletAddr").value = user.xrplAddress
+    $("walletCard").style.opacity = "0.55"
   }
-
-  // ── Health check ──────────────────────────────────────────────────────────
-  document.getElementById("btnHealth").addEventListener("click", async () => {
-    const el = document.getElementById("healthResp")
-    try {
-      const r = await fetch(API + "/health")
-      const d = await r.json()
-      showResp(el, true, `Status: <strong>${d.status}</strong> · Network: ${d.network} · ${d.timestamp}`)
-    } catch (e) {
-      showResp(el, false, `Error: ${e.message}. Is the server running on port 3000?`)
-    }
-  })
-
-  // ── Create trade ──────────────────────────────────────────────────────────
-  document.getElementById("btnCreateTrade").addEventListener("click", async () => {
-    const el = document.getElementById("createResp")
-    const body = {
-      counterpartyName:    document.getElementById("cpName").value.trim(),
-      counterpartyAddress: document.getElementById("cpAddr").value.trim(),
-      totalValue:          document.getElementById("tradeValue").value,
-      dueDate:             document.getElementById("dueDate").value,
-    }
-    if (!body.counterpartyName || !body.counterpartyAddress || !body.totalValue || !body.dueDate) {
-      return showResp(el, false, "All fields are required.")
-    }
-    try {
-      const r = await fetch(API + "/trade", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-      const d = await r.json()
-      if (d.success) {
-        showResp(el, true, `Trade created: <strong>${d.trade.id}</strong> · Status: ${d.trade.status}`)
-        loadTrades()
-      } else {
-        showResp(el, false, d.error || "Unknown error")
-      }
-    } catch (e) {
-      showResp(el, false, `Error: ${e.message}`)
-    }
-  })
-
-  // ── Settle ────────────────────────────────────────────────────────────────
-  document.getElementById("btnSettle").addEventListener("click", async () => {
-    const el = document.getElementById("settleResp")
-    const body = {
-      amount:   document.getElementById("settleAmount").value,
-      currency: document.getElementById("settleCurrency").value,
-    }
-    if (!body.amount) return showResp(el, false, "Amount is required.")
-    showResp(el, true, "Submitting transaction…")
-    try {
-      const r = await fetch(API + "/settle", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-      const d = await r.json()
-      if (d.success) {
-        showResp(el, true, `Transaction confirmed!<br>Hash: <code>${d.hash}</code><br><a href="${d.explorerUrl}" target="_blank">View on Explorer →</a>`)
-      } else {
-        showResp(el, false, d.error || "Transaction failed")
-      }
-    } catch (e) {
-      showResp(el, false, `Error: ${e.message}`)
-    }
-  })
-
-  // ── Load trades ───────────────────────────────────────────────────────────
-  async function loadTrades() {
-    const list = document.getElementById("tradeList")
-    try {
-      const r = await fetch(API + "/trades")
-      const d = await r.json()
-      if (!d.trades || d.trades.length === 0) {
-        list.innerHTML = '<div class="empty">No trades yet. Create one above.</div>'
-        return
-      }
-      list.innerHTML = d.trades.map(t => `
-        <div class="trade-item">
-          <span class="trade-id">${t.id}</span>
-          <span class="trade-meta">${t.counterpartyName} · $${t.totalValue.toLocaleString()} · Due ${t.dueDate}</span>
-          <span class="badge ${t.status}">${t.status}</span>
-        </div>
-      `).join("")
-    } catch (e) {
-      list.innerHTML = `<div class="empty">Could not load trades: ${e.message}</div>`
-    }
-  }
-
-  document.getElementById("btnRefresh").addEventListener("click", loadTrades)
+  startAutoRefresh()
   loadTrades()
-</script>
+}
 
+function setLoggedOut() {
+  token = null; currentUser = null
+  localStorage.removeItem("tf_token")
+  $("authGate").style.display   = "grid"
+  $("appContent").style.display = "none"
+  $("headerUser").style.display = "none"
+  stopAutoRefresh()
+}
+
+// ── Invite acceptance ─────────────────────────────────────────────────────────
+const inviteToken = new URLSearchParams(window.location.search).get("invite")
+
+async function checkInvite() {
+  if (!inviteToken) return
+  try {
+    const r = await fetch(API + "/invite/" + inviteToken)
+    const d = await r.json()
+    if (d.success) {
+      $("inviteBanner").style.display = "block"
+      $("inviteBannerText").textContent = `You've been invited to join trade "${d.invite.tradeName}" ($${Number(d.invite.tradeValue || 0).toLocaleString()} USD). Sign in or create an account to accept.`
+      if (d.invite.inviteeEmail) $("loginEmail").value = d.invite.inviteeEmail
+    }
+  } catch {}
+}
+
+async function acceptPendingInvite() {
+  if (!inviteToken) return
+  try {
+    const r = await fetch(API + "/invite/" + inviteToken + "/accept", { method: "POST", headers: authH() })
+    const d = await r.json()
+    if (d.success) {
+      window.history.replaceState({}, "", "/")
+      toast("You've joined the trade!", "ok")
+      loadTrades()
+    }
+  } catch {}
+}
+
+async function boot() {
+  checkInvite()
+  if (!token) { setLoggedOut(); return }
+  try {
+    const r = await fetch(API + "/auth/me", { headers: authH() })
+    const d = await r.json()
+    if (d.success) { setLoggedIn(d.user, token); acceptPendingInvite() }
+    else setLoggedOut()
+  } catch { setLoggedOut() }
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+$("btnLogin").addEventListener("click", async () => {
+  const btn = $("btnLogin")
+  const el  = $("authResp")
+  const body = { email: $("loginEmail").value.trim(), password: $("loginPassword").value }
+  if (!body.email || !body.password) return resp(el, false, "Email and password are required.")
+  setLoading(btn, true)
+  try {
+    const r = await fetch(API + "/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    const d = await r.json()
+    if (d.success) { setLoggedIn(d.user, d.token); acceptPendingInvite() }
+    else resp(el, false, d.error || "Login failed")
+  } catch (e) { resp(el, false, e.message) }
+  finally { setLoading(btn, false, "Sign in") }
+})
+
+$("btnRegister").addEventListener("click", async () => {
+  const btn = $("btnRegister")
+  const el  = $("authResp")
+  const body = { email: $("regEmail").value.trim(), password: $("regPassword").value }
+  if (!body.email || !body.password) return resp(el, false, "Email and password are required.")
+  setLoading(btn, true)
+  try {
+    const r = await fetch(API + "/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    const d = await r.json()
+    if (d.success) { setLoggedIn(d.user, d.token); acceptPendingInvite() }
+    else resp(el, false, d.error || "Registration failed")
+  } catch (e) { resp(el, false, e.message) }
+  finally { setLoading(btn, false, "Create account") }
+})
+
+$("btnLogout").addEventListener("click", setLoggedOut)
+
+// ── Wallet link ───────────────────────────────────────────────────────────────
+$("btnLinkWallet").addEventListener("click", async () => {
+  const btn = $("btnLinkWallet")
+  const el  = $("walletResp")
+  const xrplAddress = $("walletAddr").value.trim()
+  if (!xrplAddress) return resp(el, false, "Enter your XRPL address.")
+  setLoading(btn, true)
+  try {
+    const r = await fetch(API + "/auth/wallet", { method: "POST", headers: authH(), body: JSON.stringify({ xrplAddress }) })
+    const d = await r.json()
+    if (d.success) {
+      currentUser = d.user
+      $("headerWallet").textContent = shorten(d.user.xrplAddress)
+      $("walletCard").style.opacity = "0.55"
+      resp(el, true, "Wallet linked: " + d.user.xrplAddress)
+      toast("Wallet linked successfully", "ok")
+    } else resp(el, false, d.error || "Failed")
+  } catch (e) { resp(el, false, e.message) }
+  finally { setLoading(btn, false, "Link wallet") }
+})
+
+// ── Health ────────────────────────────────────────────────────────────────────
+$("btnHealth").addEventListener("click", async () => {
+  const btn = $("btnHealth")
+  setLoading(btn, true)
+  try {
+    const r = await fetch(API + "/health")
+    const d = await r.json()
+    const grid = $("healthGrid")
+    grid.innerHTML = ""
+    grid.className = "health-grid"
+    const cells = [
+      ["Status",   d.status === "ok" ? "ok" : "error",            d.status],
+      ["Network",  "",                                              d.network || "—"],
+      ["XRPL",     d.xrpl?.connected ? "ok" : "err",              d.xrpl?.connected ? "Connected" : "Disconnected"],
+      ["Node",     "",                                              d.xrpl?.node ? d.xrpl.node.replace("wss://","") : "—"],
+      ["Uptime",   "",                                              d.uptime != null ? fmtUptime(d.uptime) : "—"],
+      ["MPT",      "",                                              d.mptEnabled ? "Enabled" : "Disabled"],
+    ]
+    cells.forEach(([k, cls, v]) => {
+      const cell = document.createElement("div"); cell.className = "health-cell"
+      const kEl = document.createElement("div"); kEl.className = "hk"; kEl.textContent = k
+      const vEl = document.createElement("div"); vEl.className = "hv" + (cls ? " " + cls : ""); vEl.textContent = v
+      cell.appendChild(kEl); cell.appendChild(vEl)
+      grid.appendChild(cell)
+    })
+    // Update network chip
+    if (d.network) {
+      $("networkChip").textContent = d.network === "mainnet" ? "Mainnet" : "Testnet"
+      $("networkChip").style.background = d.network === "mainnet" ? "#8a1a1a" : ""
+    }
+  } catch (e) { toast("Health check failed: " + e.message, "err") }
+  finally { setLoading(btn, false, "Check health") }
+})
+
+function fmtUptime(seconds) {
+  if (seconds < 60) return seconds + "s"
+  if (seconds < 3600) return Math.floor(seconds / 60) + "m"
+  return Math.floor(seconds / 3600) + "h " + Math.floor((seconds % 3600) / 60) + "m"
+}
+
+// ── Create trade ──────────────────────────────────────────────────────────────
+$("btnCreateTrade").addEventListener("click", async () => {
+  const btn = $("btnCreateTrade")
+  const el  = $("createResp")
+  const body = {
+    counterpartyName:    $("cpName").value.trim(),
+    counterpartyAddress: $("cpAddr").value.trim(),
+    totalValue:          $("tradeValue").value,
+    dueDate:             $("dueDate").value,
+  }
+  if (!body.counterpartyName)
+    return resp(el, false, "Counterparty name is required.")
+  if (!body.counterpartyAddress)
+    return resp(el, false, "Counterparty XRPL address is required.")
+  if (!body.totalValue || Number(body.totalValue) <= 0)
+    return resp(el, false, "Total value must be a positive number.")
+  if (!body.dueDate)
+    return resp(el, false, "Due date is required.")
+  setLoading(btn, true)
+  try {
+    const r = await fetch(API + "/trade", { method: "POST", headers: authH(), body: JSON.stringify(body) })
+    const d = await r.json()
+    if (d.success) {
+      resp(el, true, "Trade created: " + d.trade.id)
+      toast("Trade " + d.trade.id + " created", "ok")
+      loadTrades()
+    } else resp(el, false, d.error || "Unknown error")
+  } catch (e) { resp(el, false, e.message) }
+  finally { setLoading(btn, false, "Create Trade") }
+})
+
+// ── XUMM modal ────────────────────────────────────────────────────────────────
+function openXumm(qr_png, deep_link, uuid, onSigned) {
+  $("xummQR").src             = qr_png
+  $("xummDeepLink").href      = deep_link
+  $("xummStatus").textContent = "Waiting for signature…"
+  $("xummOverlay").classList.add("open")
+
+  let tries = 0
+  xummPollTimer = setInterval(async () => {
+    if (++tries > 120) {
+      clearInterval(xummPollTimer); closeXumm()
+      toast("Signing timed out — please try again.", "warn")
+      return
+    }
+    try {
+      const r = await fetch(API + "/xumm/payload/" + uuid, { headers: authH() })
+      const d = await r.json()
+      if (d.cancelled) { clearInterval(xummPollTimer); closeXumm(); return }
+      if (d.signed) {
+        clearInterval(xummPollTimer)
+        $("xummStatus").textContent = "✅ Signed!"
+        toast("Transaction signed! TX: " + d.txid?.slice(0, 12) + "…", "ok", 5000)
+        setTimeout(() => { closeXumm(); loadTrades(); if (onSigned) onSigned(d) }, 1200)
+      }
+    } catch {}
+  }, 2000)
+}
+
+function closeXumm() {
+  clearInterval(xummPollTimer)
+  $("xummOverlay").classList.remove("open")
+  $("xummQR").src = ""
+}
+
+$("btnCloseModal").addEventListener("click", closeXumm)
+
+// ── Auto-refresh ──────────────────────────────────────────────────────────────
+function startAutoRefresh() { stopAutoRefresh(); refreshTimer = setInterval(loadTrades, 15_000) }
+function stopAutoRefresh()  { clearInterval(refreshTimer) }
+
+// ── XUMM action helper ────────────────────────────────────────────────────────
+async function xummAction(endpoint, body, btn, btnLabel) {
+  if (btn) setLoading(btn, true)
+  try {
+    const r = await fetch(API + endpoint, { method: "POST", headers: authH(), body: JSON.stringify(body || {}) })
+    const d = await r.json()
+    if (!d.success) { toast("Error: " + (d.error || "Unknown"), "err"); return }
+    openXumm(d.qr_png, d.deep_link, d.uuid)
+  } catch (e) { toast("Error: " + e.message, "err") }
+  finally { if (btn) setLoading(btn, false, btnLabel) }
+}
+
+// ── Trade list ────────────────────────────────────────────────────────────────
+function badge(status) {
+  const allowed = ["active","reconciled","escrowed","settled","tokenised"]
+  const el = document.createElement("span")
+  el.className = "badge " + (allowed.includes(status) ? status : "active")
+  el.textContent = status
+  return el
+}
+
+function tlRow(icon, label, sub, link) {
+  const row = document.createElement("div"); row.className = "tl-row"
+  const ic = document.createElement("span"); ic.className = "tl-icon"; ic.textContent = icon
+  const body = document.createElement("div"); body.className = "tl-body"
+  const lbl = document.createElement("div"); lbl.className = "tl-label"; lbl.textContent = label
+  body.appendChild(lbl)
+  if (sub || link) {
+    const s = document.createElement("div"); s.className = "tl-sub"
+    if (sub) s.appendChild(document.createTextNode(sub))
+    if (link) {
+      if (sub) s.appendChild(document.createTextNode(" · "))
+      const a = document.createElement("a"); a.href = link; a.target = "_blank"; a.rel = "noopener"; a.textContent = "View on Explorer ↗"
+      s.appendChild(a)
+    }
+    body.appendChild(s)
+  }
+  row.appendChild(ic); row.appendChild(body)
+  return row
+}
+
+function buildDetail(t) {
+  const div = document.createElement("div"); div.className = "trade-detail"
+
+  // ── Tab bar ──
+  const tabBar = document.createElement("div"); tabBar.className = "detail-tabs"
+  const panels = {}
+  for (const [id, label] of [["overview","Overview"],["docs","Documents"],["audit","Audit Trail"],["invite","Invite"]]) {
+    const btn   = document.createElement("button"); btn.className = "detail-tab" + (id === "overview" ? " active" : "")
+    btn.textContent = label
+    const panel = document.createElement("div");   panel.className = "detail-panel" + (id === "overview" ? " active" : "")
+    panels[id] = panel
+    btn.addEventListener("click", () => {
+      tabBar.querySelectorAll(".detail-tab").forEach(b => b.classList.remove("active"))
+      div.querySelectorAll(".detail-panel").forEach(p => p.classList.remove("active"))
+      btn.classList.add("active"); panel.classList.add("active")
+      if (id === "docs")  loadDocs(t.id, panel)
+      if (id === "audit") loadAudit(t.id, panel)
+    })
+    tabBar.appendChild(btn)
+  }
+  div.appendChild(tabBar)
+  Object.values(panels).forEach(p => div.appendChild(p))
+
+  // ── Overview panel ──
+  const overviewPanel = panels["overview"]
+  const tl = document.createElement("div"); tl.className = "timeline"
+
+  const statusRank = { active:0, reconciled:1, escrowed:2, settled:3, tokenised:4 }
+  const rank = statusRank[t.status] ?? 0
+
+  tl.appendChild(tlRow("✅", "Trade created", fmtDate(t.createdAt) + (t.creatorEmail ? " by " + t.creatorEmail : ""), null))
+
+  if (rank >= 1 && t.reconciliation?.onChain) {
+    tl.appendChild(tlRow("✅", "Reconciled on-chain", fmtDate(t.reconciliation.recordedAt), t.reconciliation.onChain.explorerUrl))
+  } else {
+    tl.appendChild(tlRow(t.status === "active" ? "⏳" : "⬜", "Reconcile", rank >= 1 ? "Complete" : "Pending", null))
+  }
+
+  if (rank >= 2 && t.escrow) {
+    tl.appendChild(tlRow("✅", "Escrow created", fmtDate(t.escrow.createdAt), t.escrow.explorerUrl))
+  } else if (rank >= 1 && rank < 2) {
+    tl.appendChild(tlRow("⬜", "Escrow (optional)", "—", null))
+  }
+
+  if (rank >= 3 && t.settlement?.onChain) {
+    tl.appendChild(tlRow("✅", "Settled", fmtDate(t.settlement.settledAt), t.settlement.onChain.explorerUrl))
+  } else {
+    tl.appendChild(tlRow(rank >= 3 ? "✅" : "⬜", "Settle", rank >= 3 ? "Complete" : "—", null))
+  }
+
+  if (rank >= 4 && t.nft) {
+    tl.appendChild(tlRow("✅", "Tokenised as NFT/RWA", fmtDate(t.nft.tokenisedAt), t.nft.explorerUrl))
+  } else {
+    tl.appendChild(tlRow("⬜", "Tokenise as RWA", rank >= 4 ? "Complete" : "—", null))
+  }
+
+  overviewPanel.appendChild(tl)
+
+  // ── Action panel ──
+  const ap = document.createElement("div"); ap.className = "action-panel"
+
+  // helper: demo advance button (no XUMM needed)
+  function demoAdvanceBtn(tradeId, label) {
+    const b = document.createElement("button")
+    b.textContent = "Demo: " + label; b.className = "btn-demo"
+    b.title = "Simulate signing without Xaman — for testing only"
+    b.addEventListener("click", async () => {
+      setLoading(b, true)
+      try {
+        const r = await fetch(API + "/trade/" + tradeId + "/advance-status", { method: "POST", headers: authH() })
+        const d = await r.json()
+        if (d.success) { toast("Status advanced to: " + d.trade.status, "ok"); loadTrades() }
+        else toast("Error: " + (d.error || "Unknown"), "err")
+      } catch (e) { toast("Error: " + e.message, "err") }
+      finally { setLoading(b, false, "Demo: " + label) }
+    })
+    return b
+  }
+
+  if (t.status === "active") {
+    ap.innerHTML = "<h4>Next step</h4>"
+    const row = document.createElement("div"); row.className = "action-row"
+    const shareDiv = document.createElement("div")
+    const shareLabel = document.createElement("label"); shareLabel.textContent = "Your share (USD)"
+    const shareInput = document.createElement("input"); shareInput.type = "number"; shareInput.placeholder = "2500"
+    shareDiv.appendChild(shareLabel); shareDiv.appendChild(shareInput)
+    const btn = document.createElement("button"); btn.textContent = "Reconcile via Xaman"
+    btn.addEventListener("click", () => {
+      const share = parseFloat(shareInput.value)
+      if (!share) return toast("Enter your share amount.", "warn")
+      xummAction("/trade/" + t.id + "/sign-reconcile", { yourShare: share }, btn, "Reconcile via Xaman")
+    })
+    row.appendChild(shareDiv); row.appendChild(btn); ap.appendChild(row)
+    ap.appendChild(demoAdvanceBtn(t.id, "Reconcile"))
+
+  } else if (t.status === "reconciled") {
+    ap.innerHTML = "<h4>Next step — choose one</h4>"
+
+    const escrowRow = document.createElement("div"); escrowRow.className = "action-row"; escrowRow.style.marginBottom = "10px"
+    const amtDiv = document.createElement("div")
+    const amtL = document.createElement("label"); amtL.textContent = "Lock amount (XRP)"
+    const amtI = document.createElement("input"); amtI.type = "number"; amtI.placeholder = "5"
+    amtDiv.appendChild(amtL); amtDiv.appendChild(amtI)
+    const hoursDiv = document.createElement("div")
+    const hoursL = document.createElement("label"); hoursL.textContent = "Release after (hours)"
+    const hoursI = document.createElement("input"); hoursI.type = "number"; hoursI.placeholder = "24"
+    hoursDiv.appendChild(hoursL); hoursDiv.appendChild(hoursI)
+    const escrowBtn = document.createElement("button"); escrowBtn.textContent = "Create Escrow"
+    escrowBtn.addEventListener("click", () => {
+      const xa = parseFloat(amtI.value), rh = parseFloat(hoursI.value)
+      if (!xa || !rh) return toast("Enter lock amount and release hours.", "warn")
+      xummAction("/trade/" + t.id + "/sign-escrow", { xrpAmount: xa, releaseHours: rh }, escrowBtn, "Create Escrow")
+    })
+    escrowRow.appendChild(amtDiv); escrowRow.appendChild(hoursDiv); escrowRow.appendChild(escrowBtn)
+    ap.appendChild(escrowRow)
+
+    const settleRow = document.createElement("div"); settleRow.className = "action-row"
+    const settleBtn = document.createElement("button"); settleBtn.className = "btn-warn"; settleBtn.textContent = "Direct Settle (RLUSD)"
+    settleBtn.addEventListener("click", async () => {
+      const ok = await confirmDialog("Skip escrow and settle directly with RLUSD? This cannot be undone.")
+      if (!ok) return
+      xummAction("/trade/" + t.id + "/sign-settle", {}, settleBtn, "Direct Settle (RLUSD)")
+    })
+    settleRow.appendChild(settleBtn); ap.appendChild(settleRow)
+    ap.appendChild(demoAdvanceBtn(t.id, "Escrow (skip to escrowed)"))
+
+  } else if (t.status === "escrowed") {
+    ap.innerHTML = "<h4>Escrow active</h4>"
+    if (t.escrow) {
+      const info = document.createElement("dl"); info.className = "escrow-info"
+      const pairs = [["Owner", shorten(t.escrow.owner || "")], ["Sequence", t.escrow.sequence ?? "—"], ["Created", fmtDate(t.escrow.createdAt)]]
+      pairs.forEach(([k, v]) => {
+        const dt = document.createElement("dt"); dt.textContent = k + ": "
+        const dd = document.createElement("dd"); dd.textContent = v
+        info.appendChild(dt); info.appendChild(dd)
+      })
+      ap.appendChild(info)
+    }
+    const finishRow = document.createElement("div"); finishRow.className = "action-row"
+    const finishBtn = document.createElement("button"); finishBtn.textContent = "Finish Escrow (release funds)"
+    finishBtn.addEventListener("click", () => xummAction("/trade/" + t.id + "/sign-finish-escrow", {}, finishBtn, "Finish Escrow"))
+    finishRow.appendChild(finishBtn); ap.appendChild(finishRow)
+    ap.appendChild(demoAdvanceBtn(t.id, "Settle (skip to settled)"))
+
+  } else if (t.status === "settled") {
+    ap.innerHTML = "<h4>Next step</h4>"
+    const row = document.createElement("div"); row.className = "action-row"
+    const btn = document.createElement("button"); btn.textContent = "Tokenise Invoice as NFT/RWA"
+    btn.addEventListener("click", () => xummAction("/trade/" + t.id + "/sign-tokenise", {}, btn, "Tokenise Invoice"))
+    row.appendChild(btn); ap.appendChild(row)
+    ap.appendChild(demoAdvanceBtn(t.id, "Tokenise"))
+
+  } else if (t.status === "tokenised") {
+    ap.innerHTML = "<h4 style='color:var(--ok)'>✅ Complete — all 5 steps done</h4>"
+  }
+
+  overviewPanel.appendChild(ap)
+
+  // ── Documents panel ──
+  const docsPanel = panels["docs"]
+  docsPanel.innerHTML = `<h4 style="font-size:.8rem;color:var(--muted);margin-bottom:10px">ATTACHED DOCUMENTS</h4>`
+  const docList = document.createElement("div"); docList.id = "docList_" + t.id
+  docsPanel.appendChild(docList)
+
+  const docForm = document.createElement("div"); docForm.style.cssText = "border-top:1px solid var(--border);padding-top:12px;margin-top:8px"
+  docForm.innerHTML = `<label style="display:block;margin-bottom:6px;font-size:.78rem;color:var(--muted)">Attach a document (file or hash)</label>`
+  const fileInput = document.createElement("input"); fileInput.type = "file"; fileInput.style.cssText = "width:100%;margin-bottom:8px;font-size:.78rem"
+  const hashInput = document.createElement("input"); hashInput.type = "text"; hashInput.placeholder = "Or paste SHA-256 hash"; hashInput.style.marginBottom = "8px"
+  const fnInput   = document.createElement("input"); fnInput.type = "text"; fnInput.placeholder = "Filename (optional)"; fnInput.style.marginBottom = "8px"
+  const uploadBtn = document.createElement("button"); uploadBtn.textContent = "Attach"; uploadBtn.className = "btn-sm"
+  uploadBtn.addEventListener("click", async () => {
+    setLoading(uploadBtn, true)
+    try {
+      if (fileInput.files[0]) {
+        const fd = new FormData(); fd.append("file", fileInput.files[0])
+        const r = await fetch(API + "/trade/" + t.id + "/document", { method: "POST", headers: { Authorization: "Bearer " + token }, body: fd })
+        const d = await r.json()
+        if (d.success) { toast("Document attached", "ok"); loadDocs(t.id, docsPanel); fileInput.value = "" }
+        else toast("Error: " + (d.error || "Upload failed"), "err")
+      } else if (hashInput.value.trim()) {
+        const r = await fetch(API + "/trade/" + t.id + "/document", { method: "POST", headers: authH(), body: JSON.stringify({ hash: hashInput.value.trim(), filename: fnInput.value.trim() || null }) })
+        const d = await r.json()
+        if (d.success) { toast("Document attached", "ok"); loadDocs(t.id, docsPanel); hashInput.value = ""; fnInput.value = "" }
+        else toast("Error: " + (d.error || "Failed"), "err")
+      } else { toast("Select a file or paste a hash.", "warn") }
+    } finally { setLoading(uploadBtn, false, "Attach") }
+  })
+  docForm.appendChild(fileInput); docForm.appendChild(hashInput); docForm.appendChild(fnInput); docForm.appendChild(uploadBtn)
+  docsPanel.appendChild(docForm)
+
+  // ── Audit Trail panel ──
+  const auditPanel = panels["audit"]
+  auditPanel.innerHTML = `<h4 style="font-size:.8rem;color:var(--muted);margin-bottom:10px">AUDIT TRAIL</h4>`
+  const auditList = document.createElement("div"); auditList.id = "auditList_" + t.id
+  auditList.innerHTML = `<div style="color:var(--muted);font-size:.78rem">Click to load audit trail.</div>`
+  auditPanel.appendChild(auditList)
+
+  // ── Invite panel ──
+  const invitePanel = panels["invite"]
+  invitePanel.innerHTML = `<h4 style="font-size:.8rem;color:var(--muted);margin-bottom:10px">INVITE COUNTERPARTY</h4>`
+  if (t.counterpartyUserId) {
+    const note = document.createElement("p"); note.style.cssText = "font-size:.78rem;color:var(--ok)"
+    note.textContent = "✅ Counterparty has joined this trade."
+    invitePanel.appendChild(note)
+  } else {
+    const emailDiv = document.createElement("div"); emailDiv.style.marginBottom = "10px"
+    const emailLabel = document.createElement("label"); emailLabel.textContent = "Counterparty email (optional — leave blank for link only)"
+    const emailIn = document.createElement("input"); emailIn.type = "email"; emailIn.placeholder = "partner@example.com"
+    emailDiv.appendChild(emailLabel); emailDiv.appendChild(emailIn)
+    const inviteBtn = document.createElement("button"); inviteBtn.textContent = "Generate invite link"
+    const linkBox = document.createElement("div"); linkBox.style.cssText = "margin-top:10px;display:none"
+    const linkInput = document.createElement("input"); linkInput.readOnly = true; linkInput.style.cssText = "font-size:.72rem;font-family:monospace"
+    const copyBtn = document.createElement("button"); copyBtn.textContent = "Copy link"; copyBtn.className = "btn-ghost btn-sm"; copyBtn.style.marginTop = "6px"
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(linkInput.value).then(() => {
+        toast("Invite link copied!", "ok")
+        copyBtn.textContent = "Copied!"
+        setTimeout(() => { copyBtn.textContent = "Copy link" }, 2000)
+      })
+    })
+    linkBox.appendChild(linkInput); linkBox.appendChild(copyBtn)
+    inviteBtn.addEventListener("click", async () => {
+      setLoading(inviteBtn, true)
+      try {
+        const body = emailIn.value.trim() ? { inviteeEmail: emailIn.value.trim() } : {}
+        const r = await fetch(API + "/trade/" + t.id + "/invite", { method: "POST", headers: authH(), body: JSON.stringify(body) })
+        const d = await r.json()
+        if (d.success) {
+          linkInput.value = d.inviteUrl; linkBox.style.display = "block"
+          toast("Invite link generated", "ok")
+        } else toast("Error: " + (d.error || "Failed"), "err")
+      } finally { setLoading(inviteBtn, false, "Generate invite link") }
+    })
+    invitePanel.appendChild(emailDiv); invitePanel.appendChild(inviteBtn); invitePanel.appendChild(linkBox)
+  }
+
+  return div
+}
+
+// ── Load documents ────────────────────────────────────────────────────────────
+async function loadDocs(tradeId, panel) {
+  const list = panel.querySelector("#docList_" + tradeId)
+  if (!list) return
+  try {
+    const r = await fetch(API + "/trade/" + tradeId + "/documents", { headers: authH() })
+    const d = await r.json()
+    list.innerHTML = ""
+    if (!d.documents || d.documents.length === 0) {
+      list.innerHTML = `<div style="color:var(--muted);font-size:.78rem;padding:8px 0">No documents attached yet.</div>`
+      return
+    }
+    d.documents.forEach(doc => {
+      const row = document.createElement("div"); row.className = "doc-item"
+      const name = document.createElement("span"); name.style.flexShrink = "0"; name.textContent = doc.filename || "Unnamed"
+      const hash = document.createElement("span"); hash.className = "doc-hash"; hash.textContent = doc.hash
+      row.appendChild(name); row.appendChild(hash); list.appendChild(row)
+    })
+  } catch {}
+}
+
+// ── Load audit trail ──────────────────────────────────────────────────────────
+async function loadAudit(tradeId, panel) {
+  const list = panel.querySelector("#auditList_" + tradeId)
+  if (!list) return
+  try {
+    const r = await fetch(API + "/trade/" + tradeId + "/audit", { headers: authH() })
+    const d = await r.json()
+    list.innerHTML = ""
+    if (!d.log || d.log.length === 0) {
+      list.innerHTML = `<div style="color:var(--muted);font-size:.78rem">No audit events yet.</div>`
+      return
+    }
+    d.log.forEach(entry => {
+      const row = document.createElement("div"); row.className = "audit-row"
+      const time   = document.createElement("span"); time.className = "audit-time"; time.textContent = new Date(entry.created_at).toLocaleString()
+      const action = document.createElement("span"); action.className = "audit-action"; action.textContent = entry.action + (entry.detail ? " — " + entry.detail : "")
+      const txCol  = document.createElement("span"); txCol.className = "audit-tx"
+      if (entry.txid) {
+        const a = document.createElement("a"); a.href = "https://testnet.xrpl.org/transactions/" + entry.txid; a.target = "_blank"; a.rel = "noopener"; a.textContent = "TX ↗"
+        txCol.appendChild(a)
+      }
+      row.appendChild(time); row.appendChild(action); row.appendChild(txCol); list.appendChild(row)
+    })
+  } catch {}
+}
+
+// ── Trade card ────────────────────────────────────────────────────────────────
+function makeTradeCard(t) {
+  const card = document.createElement("div"); card.className = "trade-card"
+  const summary = document.createElement("div"); summary.className = "trade-summary"
+  const idEl = document.createElement("span"); idEl.className = "trade-id"; idEl.textContent = t.id
+  const meta = document.createElement("span"); meta.className = "trade-meta"
+  meta.textContent = t.counterpartyName + " · $" + Number(t.totalValue).toLocaleString() + " · Due " + t.dueDate + (t.createdAt ? " · " + fmtDate(t.createdAt) : "")
+  const chev = document.createElement("span"); chev.className = "chevron"; chev.textContent = "▾"
+  summary.appendChild(idEl); summary.appendChild(meta); summary.appendChild(badge(t.status)); summary.appendChild(chev)
+  summary.addEventListener("click", () => card.hasAttribute("open") ? card.removeAttribute("open") : card.setAttribute("open", ""))
+  card.appendChild(summary); card.appendChild(buildDetail(t))
+  return card
+}
+
+async function loadTrades() {
+  const list = $("tradeList")
+  try {
+    const r = await fetch(API + "/trades", { headers: authH() })
+    const d = await r.json()
+    list.innerHTML = ""
+    if (!d.trades || d.trades.length === 0) {
+      const e = document.createElement("div"); e.className = "empty"; e.textContent = "No trades yet. Create one above."
+      list.appendChild(e); return
+    }
+    d.trades.forEach(t => list.appendChild(makeTradeCard(t)))
+  } catch (e) {
+    list.innerHTML = ""
+    const el = document.createElement("div"); el.className = "empty"; el.textContent = "Could not load trades: " + e.message
+    list.appendChild(el)
+  }
+}
+
+$("btnRefresh").addEventListener("click", loadTrades)
+
+// ── Service worker ────────────────────────────────────────────────────────────
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {})
+  })
+}
+
+boot()
+</script>
 </body>
 </html>

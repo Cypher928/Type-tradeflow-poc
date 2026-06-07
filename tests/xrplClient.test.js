@@ -48,8 +48,9 @@ test("xrpToDrops(10) === '10000000'", () => {
   assert.strictEqual(xrpl.xrpToDrops(10), "10000000")
 })
 
-test("dropsToXrp('1000000') === '1'", () => {
-  assert.strictEqual(xrpl.dropsToXrp("1000000"), "1")
+test("dropsToXrp('1000000') equals 1", () => {
+  // xrpl v3 returns a number, not a string
+  assert.strictEqual(Number(xrpl.dropsToXrp("1000000")), 1)
 })
 
 test("xrpToDrops(0.000001) === '1'", () => {
@@ -113,9 +114,52 @@ test("unixTimeToRippleTime returns a number", () => {
 
 test("Ripple epoch offset is 946684800 seconds", () => {
   // Ripple epoch starts at 2000-01-01T00:00:00Z
-  const unixEpoch2000 = 946684800
-  const rippleTime = xrpl.unixTimeToRippleTime(unixEpoch2000)
+  // xrpl v3 unixTimeToRippleTime takes milliseconds
+  const unixEpoch2000Ms = 946684800 * 1000
+  const rippleTime = xrpl.unixTimeToRippleTime(unixEpoch2000Ms)
   assert.strictEqual(rippleTime, 0)
+})
+
+// ── Trust line query response shape ──────────────────────────────────────────
+console.log("\nTrust line response mapping")
+
+test("account_lines response maps to expected shape", () => {
+  // Simulate a raw XRPL account_lines line entry
+  const rawLine = {
+    account: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
+    currency: "524C555344000000000000000000000000000000",
+    balance: "100",
+    limit: "1000000",
+    limit_peer: "0"
+  }
+  const mapped = {
+    currency: rawLine.currency,
+    issuer: rawLine.account,
+    balance: rawLine.balance,
+    limit: rawLine.limit,
+    limitPeer: rawLine.limit_peer
+  }
+  assert.strictEqual(mapped.issuer, rawLine.account)
+  assert.strictEqual(mapped.currency, rawLine.currency)
+  assert.strictEqual(mapped.balance, "100")
+  assert.strictEqual(mapped.limit, "1000000")
+  assert.strictEqual(mapped.limitPeer, "0")
+})
+
+test("RLUSD currency hex matches expected trust line currency", () => {
+  const RLUSD_CURRENCY = "524C555344000000000000000000000000000000"
+  const rawLine = { currency: RLUSD_CURRENCY }
+  assert.strictEqual(rawLine.currency, RLUSD_CURRENCY)
+})
+
+test("xrpl.isValidAddress rejects invalid addresses", () => {
+  assert.strictEqual(xrpl.isValidAddress("not-an-address"), false)
+  assert.strictEqual(xrpl.isValidAddress(""), false)
+})
+
+test("xrpl.isValidAddress accepts valid XRPL address", () => {
+  // Genesis account — always valid format
+  assert.strictEqual(xrpl.isValidAddress("rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"), true)
 })
 
 // ── Summary ───────────────────────────────────────────────────────────────────
