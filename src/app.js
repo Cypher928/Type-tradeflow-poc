@@ -111,7 +111,7 @@ app.post('/auth/register', authLimiter, async (req, res) => {
     }
 
     console.log('[register] validation passed — checking duplicate')
-    if (db.getUserByEmail(emailAddr.toLowerCase())) {
+    if (await db.getUserByEmail(emailAddr.toLowerCase())) {
       console.log('[register] FAIL: duplicate email')
       return res.status(409).json({ error: 'an account with that email already exists', field: 'email', rule: 'unique' })
     }
@@ -121,7 +121,7 @@ app.post('/auth/register', authLimiter, async (req, res) => {
 
     console.log('[register] creating user in DB')
     const userId = crypto.randomUUID()
-    const user = db.createUser({ id: userId, email: emailAddr.toLowerCase(), passwordHash })
+    const user = await db.createUser({ id: userId, email: emailAddr.toLowerCase(), passwordHash })
 
     console.log(`[register] signing token for userId=${userId}`)
     const token = signToken(user.id)
@@ -140,7 +140,7 @@ app.post('/auth/login', authLimiter, async (req, res) => {
   if (!emailAddr || !password)
     return res.status(400).json({ error: 'email and password are required' })
 
-  const record = db.getUserByEmail(emailAddr.toLowerCase())
+  const record = await db.getUserByEmail(emailAddr.toLowerCase())
   if (!record) return res.status(401).json({ error: 'invalid email or password' })
 
   const ok = await verifyPassword(password, record.passwordHash)
@@ -152,21 +152,21 @@ app.post('/auth/login', authLimiter, async (req, res) => {
 })
 
 // GET /auth/me
-app.get('/auth/me', requireAuth, (req, res) => {
-  const user = db.getUserById(req.userId)
+app.get('/auth/me', requireAuth, async (req, res) => {
+  const user = await db.getUserById(req.userId)
   if (!user) return res.status(404).json({ error: 'user not found' })
   res.json({ success: true, user })
 })
 
 // POST /auth/wallet — link an XRPL address to the logged-in account
-app.post('/auth/wallet', requireAuth, (req, res) => {
+app.post('/auth/wallet', requireAuth, async (req, res) => {
   const { xrplAddress } = req.body
   if (!xrplAddress)
     return res.status(400).json({ error: 'xrplAddress is required', field: 'xrplAddress' })
   if (!xrpl.isValidAddress(xrplAddress))
     return res.status(400).json({ error: 'Not a valid XRPL address — must start with "r" (e.g. rXXX…)', field: 'xrplAddress' })
 
-  const user = db.setWalletAddress(req.userId, xrplAddress)
+  const user = await db.setWalletAddress(req.userId, xrplAddress)
   res.json({ success: true, user })
 })
 
@@ -185,7 +185,7 @@ app.post('/xumm/sign', requireAuth, payLimiter, async (req, res) => {
     const result = await xumm.createPayload(txjson, {
       returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/`
     })
-    db.saveXummPayload({ uuid: result.uuid, tradeId: tradeId || null, action: action || txjson.TransactionType, userId: req.userId })
+    await db.saveXummPayload({ uuid: result.uuid, tradeId: tradeId || null, action: action || txjson.TransactionType, userId: req.userId })
     res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -194,7 +194,7 @@ app.post('/xumm/sign', requireAuth, payLimiter, async (req, res) => {
 
 // GET /xumm/payload/:uuid — poll signing status
 app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
-  const record = db.getXummPayload(req.params.uuid)
+  const record = await db.getXummPayload(req.params.uuid)
   if (!record) return res.status(404).json({ error: 'payload not found' })
   if (record.user_id && record.user_id !== req.userId)
     return res.status(403).json({ error: 'forbidden' })
@@ -203,10 +203,10 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
     const status = await xumm.getPayloadStatus(req.params.uuid)
 
     if (status.signed && !record.resolved) {
-      db.resolveXummPayload(req.params.uuid, status.txid)
+      await db.resolveXummPayload(req.params.uuid, status.txid)
 
       if (record.trade_id) {
-        const trade = db.getTradeById(record.trade_id)
+        const trade = await db.getTradeById(record.trade_id)
         if (trade) {
           const explorerUrl = `${explorerBase}/${status.txid}`
           const now = new Date().toISOString()
@@ -227,14 +227,14 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
           }
 
           if (record.action === 'reconcile') {
-            db.updateTrade(trade.id, {
+            await db.updateTrade(trade.id, {
               status:        'reconciled',
               reconciliation: { onChain: { hash: status.txid, explorerUrl }, recordedAt: now },
               escrow:     trade.escrow,
               settlement: trade.settlement,
               nft:        trade.nft,
             })
-            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'reconciled', txid: status.txid })
+            await db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'reconciled', txid: status.txid })
             notifyCounterparty(trade, 'reconciled', explorerUrl)
 
           } else if (record.action === 'escrow_create') {
@@ -242,47 +242,47 @@ app.get('/xumm/payload/:uuid', requireAuth, async (req, res) => {
             // Reuse the already-fetched TX for the Sequence needed by EscrowFinish
             const sequence = onChainTx?.Sequence ?? null
 
-            db.updateTrade(trade.id, {
+            await db.updateTrade(trade.id, {
               status: 'escrowed',
               reconciliation: trade.reconciliation,
               escrow: { txid: status.txid, explorerUrl, owner: status.account, sequence, createdAt: now },
               settlement: trade.settlement,
               nft:        trade.nft,
             })
-            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'escrowed', txid: status.txid })
+            await db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'escrowed', txid: status.txid })
             notifyCounterparty(trade, 'escrowed', explorerUrl)
 
           } else if (record.action === 'escrow_finish') {
-            db.updateTrade(trade.id, {
+            await db.updateTrade(trade.id, {
               status: 'settled',
               reconciliation: trade.reconciliation,
               escrow:  { ...trade.escrow, finishedTxid: status.txid, finishedExplorerUrl: explorerUrl, finishedAt: now },
               settlement: { onChain: { hash: status.txid, explorerUrl }, settledAt: now },
               nft:        trade.nft,
             })
-            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'settled (escrow finish)', txid: status.txid })
+            await db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'settled (escrow finish)', txid: status.txid })
             notifyCounterparty(trade, 'settled', explorerUrl)
 
           } else if (record.action === 'settle') {
-            db.updateTrade(trade.id, {
+            await db.updateTrade(trade.id, {
               status: 'settled',
               reconciliation: trade.reconciliation,
               escrow:     trade.escrow,
               settlement: { onChain: { hash: status.txid, explorerUrl }, settledAt: now },
               nft:        trade.nft,
             })
-            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'settled (direct)', txid: status.txid })
+            await db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'settled (direct)', txid: status.txid })
             notifyCounterparty(trade, 'settled', explorerUrl)
 
           } else if (record.action === 'tokenise') {
-            db.updateTrade(trade.id, {
+            await db.updateTrade(trade.id, {
               status: 'tokenised',
               reconciliation: trade.reconciliation,
               escrow:     trade.escrow,
               settlement: trade.settlement,
               nft:        { txid: status.txid, explorerUrl, tokenisedAt: now },
             })
-            db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'tokenised', txid: status.txid })
+            await db.logAudit({ tradeId: trade.id, userId: record.user_id, action: 'tokenised', txid: status.txid })
             notifyCounterparty(trade, 'tokenised', explorerUrl)
           }
         }
@@ -320,7 +320,7 @@ app.post('/trade', requireAuth, tradeLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Total value must be a positive number', field: 'totalValue' })
 
     const id    = 'TF-' + crypto.randomBytes(4).toString('hex').toUpperCase()
-    const trade = db.createTrade({
+    const trade = await db.createTrade({
       id,
       userId:              req.userId,
       counterpartyName:    counterpartyName.trim(),
@@ -330,7 +330,7 @@ app.post('/trade', requireAuth, tradeLimiter, async (req, res) => {
       createdAt: new Date().toISOString(),
     })
 
-    db.logAudit({ tradeId: id, userId: req.userId, action: 'trade_created', detail: `counterparty=${counterpartyAddress.trim()} value=${numericValue} due=${dueDate}` })
+    await db.logAudit({ tradeId: id, userId: req.userId, action: 'trade_created', detail: `counterparty=${counterpartyAddress.trim()} value=${numericValue} due=${dueDate}` })
     console.log(`[trade] created: ${id} counterparty=${counterpartyAddress.trim()} value=${numericValue}`)
     res.status(201).json({ success: true, trade })
   } catch (err) {
@@ -340,26 +340,26 @@ app.post('/trade', requireAuth, tradeLimiter, async (req, res) => {
 })
 
 // GET /trade/:id — single trade with creator email
-app.get('/trade/:id', requireAuth, (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+app.get('/trade/:id', requireAuth, async (req, res) => {
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
-  const creator = db.getUserById(trade.userId)
+  const creator = await db.getUserById(trade.userId)
   res.json({ success: true, trade: { ...trade, creatorEmail: creator?.email || null } })
 })
 
 // GET /trades — paginated trade list with creator emails
-app.get('/trades', requireAuth, (req, res) => {
+app.get('/trades', requireAuth, async (req, res) => {
   const limit  = Math.min(parseInt(req.query.limit)  || 50, 100)
   const offset = Math.max(parseInt(req.query.offset) || 0,  0)
-  const trades = db.getTradesByUserOrCounterpartyPaged(req.userId, limit, offset)
-  const total  = db.countTradesByUserOrCounterparty(req.userId)
+  const trades = await db.getTradesByUserOrCounterpartyPaged(req.userId, limit, offset)
+  const total  = await db.countTradesByUserOrCounterparty(req.userId)
 
   const userIds = [...new Set(trades.map(t => t.userId).filter(Boolean))]
   const userMap = {}
   for (const uid of userIds) {
-    const u = db.getUserById(uid)
+    const u = await db.getUserById(uid)
     if (u) userMap[uid] = u.email
   }
   const enriched = trades.map(t => ({ ...t, creatorEmail: userMap[t.userId] || null }))
@@ -369,8 +369,8 @@ app.get('/trades', requireAuth, (req, res) => {
 
 // POST /trade/:id/advance-status — demo/test-only manual status advancement (no XUMM required)
 const STATUS_SEQUENCE = ['active', 'reconciled', 'escrowed', 'settled', 'tokenised']
-app.post('/trade/:id/advance-status', requireAuth, (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+app.post('/trade/:id/advance-status', requireAuth, async (req, res) => {
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
@@ -399,20 +399,20 @@ app.post('/trade/:id/advance-status', requireAuth, (req, res) => {
   if (nextStatus === 'tokenised' && !patch.nft)
     patch.nft = { simulated: true, tokenisedAt: now }
 
-  const updated = db.updateTrade(trade.id, patch)
-  db.logAudit({ tradeId: trade.id, userId: req.userId, action: `simulated_${nextStatus}`, detail: 'manual advance (demo mode)' })
+  const updated = await db.updateTrade(trade.id, patch)
+  await db.logAudit({ tradeId: trade.id, userId: req.userId, action: `simulated_${nextStatus}`, detail: 'manual advance (demo mode)' })
   console.log(`[trade] manual advance: ${trade.id} ${trade.status} → ${nextStatus}`)
   res.json({ success: true, trade: updated })
 })
 
 // POST /trade/:id/sign-reconcile — build reconciliation TX and return XUMM payload
 app.post('/trade/:id/sign-reconcile', requireAuth, async (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
 
-  const user = db.getUserById(req.userId)
+  const user = await db.getUserById(req.userId)
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
 
@@ -441,7 +441,7 @@ app.post('/trade/:id/sign-reconcile', requireAuth, async (req, res) => {
 
   try {
     const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
-    db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'reconcile', userId: req.userId })
+    await db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'reconcile', userId: req.userId })
     res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -450,13 +450,13 @@ app.post('/trade/:id/sign-reconcile', requireAuth, async (req, res) => {
 
 // POST /trade/:id/sign-escrow — build EscrowCreate TX and return XUMM payload
 app.post('/trade/:id/sign-escrow', requireAuth, async (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
   if (trade.status !== 'reconciled') return res.status(400).json({ error: 'Trade must be reconciled before creating an escrow' })
 
-  const user = db.getUserById(req.userId)
+  const user = await db.getUserById(req.userId)
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
 
@@ -485,7 +485,7 @@ app.post('/trade/:id/sign-escrow', requireAuth, async (req, res) => {
 
   try {
     const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
-    db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'escrow_create', userId: req.userId })
+    await db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'escrow_create', userId: req.userId })
     res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -494,14 +494,14 @@ app.post('/trade/:id/sign-escrow', requireAuth, async (req, res) => {
 
 // POST /trade/:id/sign-finish-escrow — build EscrowFinish TX and return XUMM payload
 app.post('/trade/:id/sign-finish-escrow', requireAuth, async (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
   if (trade.status !== 'escrowed' || !trade.escrow)
     return res.status(400).json({ error: 'No active escrow found for this trade' })
 
-  const user = db.getUserById(req.userId)
+  const user = await db.getUserById(req.userId)
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
 
@@ -514,7 +514,7 @@ app.post('/trade/:id/sign-finish-escrow', requireAuth, async (req, res) => {
 
   try {
     const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
-    db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'escrow_finish', userId: req.userId })
+    await db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'escrow_finish', userId: req.userId })
     res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -523,13 +523,13 @@ app.post('/trade/:id/sign-finish-escrow', requireAuth, async (req, res) => {
 
 // POST /trade/:id/sign-tokenise — build NFTokenMint TX and return XUMM payload
 app.post('/trade/:id/sign-tokenise', requireAuth, async (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
   if (trade.status !== 'settled') return res.status(400).json({ error: 'Trade must be settled before tokenising' })
 
-  const user = db.getUserById(req.userId)
+  const user = await db.getUserById(req.userId)
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
 
@@ -571,7 +571,7 @@ app.post('/trade/:id/sign-tokenise', requireAuth, async (req, res) => {
 
   try {
     const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
-    db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'tokenise', userId: req.userId })
+    await db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'tokenise', userId: req.userId })
     res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -580,12 +580,12 @@ app.post('/trade/:id/sign-tokenise', requireAuth, async (req, res) => {
 
 // POST /trade/:id/sign-settle — build settlement TX and return XUMM payload
 app.post('/trade/:id/sign-settle', requireAuth, async (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
 
-  const user = db.getUserById(req.userId)
+  const user = await db.getUserById(req.userId)
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
 
@@ -611,7 +611,7 @@ app.post('/trade/:id/sign-settle', requireAuth, async (req, res) => {
 
   try {
     const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
-    db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'settle', userId: req.userId })
+    await db.saveXummPayload({ uuid: result.uuid, tradeId: trade.id, action: 'settle', userId: req.userId })
     res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -624,7 +624,7 @@ app.post('/trade/:id/sign-settle', requireAuth, async (req, res) => {
 
 // POST /trade/:id/invite — generate invite link and optionally email the counterparty
 app.post('/trade/:id/invite', requireAuth, async (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId) return res.status(403).json({ error: 'Only the trade creator can invite a counterparty' })
 
@@ -633,11 +633,11 @@ app.post('/trade/:id/invite', requireAuth, async (req, res) => {
   const appUrl    = process.env.APP_URL || `http://localhost:${port}`
   const inviteUrl = `${appUrl}/?invite=${token}`
 
-  db.createInvite({ token, tradeId: trade.id, inviteeEmail: inviteeAddr || null, invitedBy: req.userId })
-  db.logAudit({ tradeId: trade.id, userId: req.userId, action: 'invite_created', detail: inviteeAddr || 'link only' })
+  await db.createInvite({ token, tradeId: trade.id, inviteeEmail: inviteeAddr || null, invitedBy: req.userId })
+  await db.logAudit({ tradeId: trade.id, userId: req.userId, action: 'invite_created', detail: inviteeAddr || 'link only' })
 
   if (inviteeAddr) {
-    const inviter = db.getUserById(req.userId)
+    const inviter = await db.getUserById(req.userId)
     await email.tradeInvite({
       to:           inviteeAddr,
       inviterEmail: inviter.email,
@@ -651,12 +651,12 @@ app.post('/trade/:id/invite', requireAuth, async (req, res) => {
 })
 
 // GET /invite/:token — look up invite details (public, used by frontend)
-app.get('/invite/:token', (req, res) => {
-  const invite = db.getInvite(req.params.token)
+app.get('/invite/:token', async (req, res) => {
+  const invite = await db.getInvite(req.params.token)
   if (!invite) return res.status(404).json({ error: 'Invite not found or expired' })
   if (invite.accepted_at) return res.status(410).json({ error: 'Invite already accepted' })
 
-  const trade = db.getTradeById(invite.trade_id)
+  const trade = await db.getTradeById(invite.trade_id)
   res.json({
     success: true,
     invite: {
@@ -670,22 +670,22 @@ app.get('/invite/:token', (req, res) => {
 })
 
 // POST /invite/:token/accept — accept invite (must be logged in)
-app.post('/invite/:token/accept', requireAuth, (req, res) => {
-  const invite = db.getInvite(req.params.token)
+app.post('/invite/:token/accept', requireAuth, async (req, res) => {
+  const invite = await db.getInvite(req.params.token)
   if (!invite) return res.status(404).json({ error: 'Invite not found' })
   if (invite.accepted_at) return res.status(410).json({ error: 'Invite already accepted' })
 
-  db.acceptInvite(invite.token)
-  db.setCounterparty(invite.trade_id, req.userId)
-  db.logAudit({ tradeId: invite.trade_id, userId: req.userId, action: 'counterparty_joined' })
+  await db.acceptInvite(invite.token)
+  await db.setCounterparty(invite.trade_id, req.userId)
+  await db.logAudit({ tradeId: invite.trade_id, userId: req.userId, action: 'counterparty_joined' })
 
-  const trade = db.getTradeById(invite.trade_id)
+  const trade = await db.getTradeById(invite.trade_id)
   res.json({ success: true, trade })
 })
 
 // POST /trade/:id/document — upload a document; store its SHA-256 hash
-app.post('/trade/:id/document', requireAuth, upload.single('file'), (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+app.post('/trade/:id/document', requireAuth, upload.single('file'), async (req, res) => {
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
@@ -704,33 +704,33 @@ app.post('/trade/:id/document', requireAuth, upload.single('file'), (req, res) =
     return res.status(400).json({ error: 'Provide a file upload or a hash' })
   }
 
-  const doc = db.addDocument({ id: crypto.randomUUID(), tradeId: trade.id, userId: req.userId, filename, hash, sizeBytes })
-  db.logAudit({ tradeId: trade.id, userId: req.userId, action: 'document_added', detail: `${filename || 'untitled'} — SHA-256: ${hash}` })
+  const doc = await db.addDocument({ id: crypto.randomUUID(), tradeId: trade.id, userId: req.userId, filename, hash, sizeBytes })
+  await db.logAudit({ tradeId: trade.id, userId: req.userId, action: 'document_added', detail: `${filename || 'untitled'} — SHA-256: ${hash}` })
 
   res.status(201).json({ success: true, document: doc })
 })
 
 // GET /trade/:id/documents — list documents attached to a trade
-app.get('/trade/:id/documents', requireAuth, (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+app.get('/trade/:id/documents', requireAuth, async (req, res) => {
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
-  res.json({ success: true, documents: db.getDocuments(req.params.id) })
+  res.json({ success: true, documents: await db.getDocuments(req.params.id) })
 })
 
 // GET /trade/:id/audit — full audit log for a trade
-app.get('/trade/:id/audit', requireAuth, (req, res) => {
-  const trade = db.getTradeById(req.params.id)
+app.get('/trade/:id/audit', requireAuth, async (req, res) => {
+  const trade = await db.getTradeById(req.params.id)
   if (!trade) return res.status(404).json({ error: 'Trade not found' })
   if (trade.userId !== req.userId && trade.counterpartyUserId !== req.userId)
     return res.status(403).json({ error: 'Forbidden' })
-  res.json({ success: true, log: db.getAuditLog(req.params.id) })
+  res.json({ success: true, log: await db.getAuditLog(req.params.id) })
 })
 
 // GET /kyc/status — current user's KYC status
-app.get('/kyc/status', requireAuth, (req, res) => {
-  const user = db.getUserById(req.userId)
+app.get('/kyc/status', requireAuth, async (req, res) => {
+  const user = await db.getUserById(req.userId)
   if (!user) return res.status(404).json({ error: 'User not found' })
   res.json({
     success:   true,
@@ -743,7 +743,7 @@ app.get('/kyc/status', requireAuth, (req, res) => {
 
 // POST /kyc/webhook — KYC provider posts status updates here (Sumsub, Onfido, Persona, etc.)
 // Set KYC_WEBHOOK_SECRET in .env; the provider signs the body with HMAC-SHA256.
-app.post('/kyc/webhook', (req, res) => {
+app.post('/kyc/webhook', async (req, res) => {
   const secret = process.env.KYC_WEBHOOK_SECRET
   if (secret) {
     const sig      = req.headers['x-kyc-signature'] || ''
@@ -754,22 +754,22 @@ app.post('/kyc/webhook', (req, res) => {
   const { userId, status } = req.body
   if (!userId || !['pending', 'verified', 'rejected'].includes(status))
     return res.status(400).json({ error: 'userId and status (pending|verified|rejected) required' })
-  db.setKycStatus(userId, status)
-  db.logAudit({ userId, action: 'kyc_status_updated', detail: status })
+  await db.setKycStatus(userId, status)
+  await db.logAudit({ userId, action: 'kyc_status_updated', detail: status })
   compliance.amlLog({ userId, amountUsd: 0, action: `kyc_${status}` })
   res.json({ success: true })
 })
 
 // PATCH /admin/users/:id/kyc — manual KYC override, requires X-Admin-Secret header
-app.patch('/admin/users/:id/kyc', (req, res) => {
+app.patch('/admin/users/:id/kyc', async (req, res) => {
   const adminSecret = process.env.ADMIN_SECRET
   if (!adminSecret || req.headers['x-admin-secret'] !== adminSecret)
     return res.status(403).json({ error: 'Forbidden' })
   const { status } = req.body
   if (!['pending', 'verified', 'rejected'].includes(status))
     return res.status(400).json({ error: 'status must be pending, verified, or rejected' })
-  db.setKycStatus(req.params.id, status)
-  db.logAudit({ userId: req.params.id, action: 'kyc_manual_override', detail: status })
+  await db.setKycStatus(req.params.id, status)
+  await db.logAudit({ userId: req.params.id, action: 'kyc_manual_override', detail: status })
   compliance.amlLog({ userId: req.params.id, amountUsd: 0, action: `kyc_manual_${status}` })
   res.json({ success: true })
 })
@@ -797,7 +797,7 @@ app.get('/trust-lines/:address', requireAuth, async (req, res) => {
 
 // POST /trust-line/sign — return XUMM payload for TrustSet (no seed needed)
 app.post('/trust-line/sign', requireAuth, async (req, res) => {
-  const user = db.getUserById(req.userId)
+  const user = await db.getUserById(req.userId)
   if (!user?.xrplAddress)
     return res.status(400).json({ error: 'Link an XRPL address to your account first via POST /auth/wallet' })
 
@@ -813,7 +813,7 @@ app.post('/trust-line/sign', requireAuth, async (req, res) => {
   }
   try {
     const result = await xumm.createPayload(txjson, { returnUrl: `${process.env.APP_URL || `http://localhost:${port}`}/` })
-    db.saveXummPayload({ uuid: result.uuid, tradeId: null, action: 'TrustSet', userId: req.userId })
+    await db.saveXummPayload({ uuid: result.uuid, tradeId: null, action: 'TrustSet', userId: req.userId })
     res.json({ success: true, ...result })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -928,7 +928,7 @@ async function sendPayment(seed, destination, amount, currency = 'XRP', tradeId 
 // ─── Email counterparty on trade status change ────────────────────────────────
 async function notifyCounterparty(trade, status, explorerUrl) {
   if (!trade.counterpartyUserId) return
-  const cp = db.getUserById(trade.counterpartyUserId)
+  const cp = await db.getUserById(trade.counterpartyUserId)
   if (!cp?.email) return
   email.tradeStatusChanged({ to: cp.email, tradeId: trade.id, status, explorerUrl }).catch(() => {})
 }

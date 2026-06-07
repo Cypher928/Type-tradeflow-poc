@@ -26,7 +26,7 @@ function amlLog({ userId, tradeId, amountUsd, action, ledgerTxid }) {
     flag,
   }
   console.log(`[AML] ${JSON.stringify(entry)}`)
-  db.logAml({ userId, tradeId, amountUsd, action, flag, ledgerTxid })
+  db.logAml({ userId, tradeId, amountUsd, action, flag, ledgerTxid }).catch(err => console.error('[AML] db write failed:', err.message))
 }
 
 module.exports = { checkTravelRule, amlLog, TRAVEL_RULE_THRESHOLD }
