@@ -48,7 +48,14 @@ app.use(express.static(path.join(__dirname, '../public')))
 
 // ─── XRPL Client with failover ────────────────────────────────────────────────
 const XRPL_NETWORK = process.env.XRPL_NETWORK || 'testnet'
-const XRPL_NODES   = (process.env.XRPL_NODES || process.env.XRPL_NODE || 'wss://s.altnet.rippletest.net:51233')
+// Default testnet nodes ordered by reliability in cloud/serverless environments.
+// wss://testnet.xrpl-labs.com runs on port 443 (always open).
+// wss://s.altnet.rippletest.net:51233 uses port 51233 which is often blocked by
+// cloud firewalls (Vercel, AWS Lambda, etc.).  Set XRPL_NODES env var to override.
+const XRPL_NODES_DEFAULT = XRPL_NETWORK === 'mainnet'
+  ? 'wss://xrplcluster.com,wss://s1.ripple.com,wss://s2.ripple.com'
+  : 'wss://testnet.xrpl-labs.com,wss://s.altnet.rippletest.net:51233'
+const XRPL_NODES = (process.env.XRPL_NODES || process.env.XRPL_NODE || XRPL_NODES_DEFAULT)
   .split(',').map(s => s.trim()).filter(Boolean)
 const explorerBase = XRPL_NETWORK === 'mainnet'
   ? 'https://livenet.xrpl.org/transactions'
@@ -59,20 +66,25 @@ let _clientIndex = 0
 
 async function getClient() {
   if (_client && _client.isConnected()) return _client
+
   for (let i = 0; i < XRPL_NODES.length; i++) {
     const url = XRPL_NODES[(_clientIndex + i) % XRPL_NODES.length]
+    console.log(`[xrpl] connecting to ${url} (attempt ${i + 1}/${XRPL_NODES.length})`)
     try {
       const c = new xrpl.Client(url)
-      await c.connect()
+      await Promise.race([
+        c.connect(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('connect timeout (8s)')), 8000)),
+      ])
       _clientIndex = (_clientIndex + i) % XRPL_NODES.length
       _client      = c
-      console.log(`XRPL connected: ${url}`)
+      console.log(`[xrpl] connected: ${url}`)
       return c
     } catch (err) {
-      console.warn(`XRPL node ${url} unavailable: ${err.message}`)
+      console.error(`[xrpl] node ${url} failed: ${err.message}`)
     }
   }
-  throw new Error('All XRPL nodes unreachable')
+  throw new Error(`All XRPL nodes unreachable: [${XRPL_NODES.join(', ')}]`)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -764,19 +776,52 @@ app.post('/settle', payLimiter, async (req, res) => {
 // HEALTH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
+  let xrpl = {
+    connected:  false,
+    node:       XRPL_NODES[_clientIndex] || XRPL_NODES[0] || null,
+    nodeCount:  XRPL_NODES.length,
+    nodes:      XRPL_NODES,
+  }
+
+  console.log(`[health] XRPL nodes configured: ${XRPL_NODES.join(', ')}`)
+
+  try {
+    const c = await Promise.race([
+      getClient(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('health connect timeout (10s)')), 10000)),
+    ])
+
+    console.log('[health] requesting server_info')
+    const resp = await c.request({ command: 'server_info' })
+    const info = resp.result?.info ?? {}
+
+    console.log(`[health] server_info OK — build=${info.build_version} ledger=${info.validated_ledger?.seq}`)
+
+    xrpl = {
+      connected:        true,
+      node:             XRPL_NODES[_clientIndex],
+      nodeCount:        XRPL_NODES.length,
+      nodes:            XRPL_NODES,
+      serverVersion:    info.build_version   ?? null,
+      ledger:           info.validated_ledger?.seq ?? null,
+      ledgerHash:       info.validated_ledger?.hash ?? null,
+      serverState:      info.server_state   ?? null,
+      completeLedgers:  info.complete_ledgers ?? null,
+    }
+  } catch (err) {
+    console.error(`[health] XRPL unavailable: ${err.message}`)
+    xrpl.error = err.message
+  }
+
   res.json({
-    status:  'ok',
-    network: XRPL_NETWORK,
-    xrpl: {
-      connected: _client ? _client.isConnected() : false,
-      node:      XRPL_NODES[_clientIndex] || null,
-      nodeCount: XRPL_NODES.length,
-    },
-    db:          'ok',
-    mptEnabled:  process.env.ENABLE_MPT === 'true',
-    uptime:      Math.floor(process.uptime()),
-    timestamp:   new Date().toISOString(),
+    status:     'ok',
+    network:    XRPL_NETWORK,
+    xrpl,
+    db:         'ok',
+    mptEnabled: process.env.ENABLE_MPT === 'true',
+    uptime:     Math.floor(process.uptime()),
+    timestamp:  new Date().toISOString(),
   })
 })
 
